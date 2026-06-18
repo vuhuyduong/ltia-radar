@@ -1,0 +1,191 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 96%;
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 47% 9%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 222 47% 6%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 96%;
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 199 89% 48%;
+    --radius: 0.75rem;
+
+    /* Custom LTIA colors */
+    --critical: 0 84% 60%;
+    --critical-foreground: 0 0% 100%;
+    --high: 25 95% 53%;
+    --high-foreground: 0 0% 100%;
+    --medium: 45 93% 47%;
+    --medium-foreground: 0 0% 10%;
+    --low: 142 71% 45%;
+    --low-foreground: 0 0% 100%;
+    --positive: 142 71% 45%;
+    --negative: 0 84% 60%;
+    --neutral: 215 20% 55%;
+
+    /* Sidebar */
+    --sidebar: 222 47% 7%;
+    --sidebar-foreground: 210 40% 80%;
+    --sidebar-border: 217 33% 15%;
+    --sidebar-active: 199 89% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-[hsl(var(--border))];
+  }
+
+  body {
+    @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))];
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(222 47% 8%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(217 33% 25%);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(217 33% 35%);
+}
+
+/* Card glass effect */
+.glass-card {
+  background: linear-gradient(
+    135deg,
+    hsla(222, 47%, 11%, 0.8) 0%,
+    hsla(222, 47%, 8%, 0.6) 100%
+  );
+  backdrop-filter: blur(12px);
+  border: 1px solid hsla(217, 33%, 25%, 0.3);
+}
+
+/* Impact level badges */
+.badge-critical {
+  background: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(0 72% 50%) 100%);
+  color: white;
+  animation: pulse-critical 2s infinite;
+}
+
+.badge-high {
+  background: linear-gradient(135deg, hsl(25 95% 53%) 0%, hsl(25 80% 45%) 100%);
+  color: white;
+}
+
+.badge-medium {
+  background: linear-gradient(135deg, hsl(45 93% 47%) 0%, hsl(45 80% 40%) 100%);
+  color: hsl(0 0% 10%);
+}
+
+.badge-low {
+  background: linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(142 60% 38%) 100%);
+  color: white;
+}
+
+@keyframes pulse-critical {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+/* Sentiment badges */
+.badge-negative {
+  background: hsla(0, 84%, 60%, 0.15);
+  color: hsl(0 84% 65%);
+  border: 1px solid hsla(0, 84%, 60%, 0.3);
+}
+
+.badge-positive {
+  background: hsla(142, 71%, 45%, 0.15);
+  color: hsl(142 71% 55%);
+  border: 1px solid hsla(142, 71%, 45%, 0.3);
+}
+
+.badge-neutral {
+  background: hsla(215, 20%, 55%, 0.15);
+  color: hsl(215 20% 65%);
+  border: 1px solid hsla(215, 20%, 55%, 0.3);
+}
+
+/* Stat card shimmer effect */
+.stat-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsla(199, 89%, 48%, 0.05) 50%,
+    transparent 100%
+  );
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Table styling */
+.data-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.data-table thead th {
+  background: hsl(222 47% 8%);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.data-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.data-table tbody tr:hover {
+  background: hsla(199, 89%, 48%, 0.05);
+}
+
+/* Chart container */
+.chart-container {
+  background: linear-gradient(
+    180deg,
+    hsla(222, 47%, 11%, 0.5) 0%,
+    hsla(222, 47%, 8%, 0.3) 100%
+  );
+  border-radius: var(--radius);
+  border: 1px solid hsla(217, 33%, 20%, 0.5);
+}

@@ -1,0 +1,63 @@
+services:
+  # ── MongoDB ─────────────────────────────────────────
+  mongodb:
+    image: mongo:7.0
+    container_name: ltia-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - ltia-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend (FastAPI) ───────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ltia-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/workspace
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - ltia-network
+
+  # ── Frontend (NextJS) ──────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ltia-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - ./frontend:/workspace
+      - /workspace/node_modules
+      - /workspace/.next
+    depends_on:
+      - backend
+    networks:
+      - ltia-network
+
+volumes:
+  mongo-data:
+
+networks:
+  ltia-network:
+    driver: bridge
