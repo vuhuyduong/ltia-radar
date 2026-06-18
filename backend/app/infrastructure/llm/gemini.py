@@ -53,7 +53,10 @@ class GeminiImplementation(ILLMService):
 
     def __init__(self, api_key: str | None = None):
         self.api_key = api_key or settings.gemini_api_key
-        self.client = genai.Client(api_key=self.api_key)
+        if self.api_key:
+            self.client = genai.Client(api_key=self.api_key)
+        else:
+            self.client = None
         self.model = "gemini-2.5-flash"
 
     async def extract_insight(self, raw_text: str, title: str = "") -> dict:
