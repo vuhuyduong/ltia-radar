@@ -95,19 +95,19 @@ DEFAULT_ALERT_RULES = [
 DEFAULT_LLM_CONFIGS = [
     {
         "provider": "Google Gemini",
-        "model_name": "gemini-2.5-flash",
+        "model_name": "gemini-3.5-flash",
         "api_key": "",  # Set via UI or GEMINI_API_KEY env var after deploy
         "is_active": True,
         "is_default": True,
-        "description": "Google Gemini 2.5 Flash"
+        "description": "Google Gemini 3.5 Flash"
     },
     {
         "provider": "Google Gemini",
-        "model_name": "gemini-2.0-flash",
+        "model_name": "gemini-3-flash-preview",
         "api_key": "",  # Set via UI or GEMINI_API_KEY env var after deploy
         "is_active": False,
         "is_default": False,
-        "description": "Google Gemini 2.0 Flash"
+        "description": "Google Gemini 3.0 Flash (Preview)"
     }
 ]
 
