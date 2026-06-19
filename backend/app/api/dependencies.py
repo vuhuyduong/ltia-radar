@@ -13,6 +13,10 @@ from app.infrastructure.database.repositories import (
     ProcessedDataRepository,
     RawDataRepository,
     SourceRepository,
+    LLMConfigRepository,
+    CrawlerSettingsRepository,
+    GeneralSettingsRepository,
+    LLMPromptRepository,
 )
 from app.infrastructure.llm.gemini import GeminiImplementation
 
@@ -36,6 +40,22 @@ def get_processed_data_repo() -> ProcessedDataRepository:
 
 def get_alert_rule_repo() -> AlertRuleRepository:
     return AlertRuleRepository()
+
+
+def get_llm_config_repo() -> LLMConfigRepository:
+    return LLMConfigRepository()
+
+
+def get_llm_prompt_repo() -> LLMPromptRepository:
+    return LLMPromptRepository()
+
+
+def get_crawler_settings_repo() -> CrawlerSettingsRepository:
+    return CrawlerSettingsRepository()
+
+
+def get_general_settings_repo() -> GeneralSettingsRepository:
+    return GeneralSettingsRepository()
 
 
 # ── Service factories ──

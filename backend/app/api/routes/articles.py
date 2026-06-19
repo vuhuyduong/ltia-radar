@@ -26,6 +26,7 @@ async def list_articles(
     search: Optional[str] = Query(None, description="Search in title and summary"),
     date_from: Optional[str] = Query(None, description="ISO date string"),
     date_to: Optional[str] = Query(None, description="ISO date string"),
+    target_scope: Optional[str] = Query(None, description="Filter by target scope/gói thầu"),
     repo: ProcessedDataRepository = Depends(get_processed_data_repo),
 ):
     """List processed articles with optional filters."""
@@ -42,8 +43,31 @@ async def list_articles(
         search=search,
         date_from=dt_from,
         date_to=dt_to,
+        target_scope=target_scope,
     )
-    total = await repo.count()
+    # Construct query for accurate count matching filters
+    count_query = {}
+    if sentiment:
+        count_query["sentiment"] = sentiment
+    if impact_level:
+        count_query["impact_level"] = impact_level
+    if category:
+        count_query["category"] = {"$in": [category]}
+    if target_scope:
+        count_query["target_scope"] = {"$in": [target_scope]}
+    if search:
+        count_query["$or"] = [
+            {"title": {"$regex": search, "$options": "i"}},
+            {"executive_summary": {"$regex": search, "$options": "i"}},
+        ]
+    if dt_from or dt_to:
+        count_query["processed_time"] = {}
+        if dt_from:
+            count_query["processed_time"]["$gte"] = dt_from
+        if dt_to:
+            count_query["processed_time"]["$lte"] = dt_to
+
+    total = await repo.count(count_query)
     return {"data": articles, "total": total}
 
 

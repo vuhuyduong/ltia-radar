@@ -4,7 +4,7 @@ WORKDIR /workspace
 
 # Dependencies
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm install --registry=https://registry.npmmirror.com
 
 # Copy source
 COPY . .

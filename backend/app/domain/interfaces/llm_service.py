@@ -17,19 +17,26 @@ class ILLMService(ABC):
     async def extract_insight(self, raw_text: str, title: str = "") -> dict:
         """
         Analyze raw article text and return structured insights.
-
-        Args:
-            raw_text: Full article text content.
-            title: Article title for additional context.
-
-        Returns:
-            Dictionary containing:
-            - category: list[str]
-            - sentiment: str (POSITIVE/NEGATIVE/NEUTRAL)
-            - target_scope: list[str]
-            - impact_level: str (CRITICAL/HIGH/MEDIUM/LOW)
-            - key_entities: list[dict]
-            - executive_summary: str
-            - is_rumor: bool
         """
         pass
+
+    @abstractmethod
+    async def extract_insights_batch(self, articles: list[dict]) -> list[dict]:
+        """
+        Analyze a batch of raw articles and return structured insights for each.
+        
+        Args:
+            articles: List of dicts containing 'title' and 'raw_text'.
+            
+        Returns:
+            List of dicts representing structured insights.
+        """
+        pass
+
+    async def get_rate_limit(self) -> int:
+        """
+        Get the rate limit (RPM) of the active model configuration.
+        """
+        return 10
+
+

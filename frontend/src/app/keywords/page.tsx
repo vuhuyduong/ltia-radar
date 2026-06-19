@@ -71,7 +71,7 @@ export default function KeywordsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Từ khóa</h1>
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Từ khóa</h1>
           <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
             Quản lý danh sách từ khóa mục tiêu để lọc tin tức liên quan
           </p>
@@ -96,7 +96,7 @@ export default function KeywordsPage() {
             value={newKeyword}
             onChange={(e) => setNewKeyword(e.target.value)}
             placeholder='VD: "sân bay Long Thành", "Vietur", "bụi đỏ"...'
-            className="flex-1 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2 text-sm text-white placeholder:text-[hsl(var(--muted-foreground))] focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+            className="flex-1 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2 text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
             autoFocus
           />
           <button
@@ -108,7 +108,7 @@ export default function KeywordsPage() {
           <button
             type="button"
             onClick={() => setShowInput(false)}
-            className="rounded-lg bg-[hsl(var(--secondary))] px-4 py-2 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-white"
+            className="rounded-lg bg-[hsl(var(--secondary))] px-4 py-2 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           >
             Hủy
           </button>
@@ -139,7 +139,7 @@ export default function KeywordsPage() {
                 <span
                   className={`text-sm font-medium ${
                     keyword.is_active
-                      ? "text-white"
+                      ? "text-[hsl(var(--foreground))]"
                       : "text-[hsl(var(--muted-foreground))] line-through"
                   }`}
                 >

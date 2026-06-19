@@ -8,7 +8,17 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import alert_rules, articles, crawler, dashboard, keywords, sources
+from app.api.routes import (
+    alert_rules,
+    articles,
+    crawler,
+    dashboard,
+    keywords,
+    sources,
+    llm_configs,
+    general,
+    llm_prompts,
+)
 from app.config import settings
 from app.infrastructure.database.mongodb import MongoDB
 from app.scheduler.jobs import start_scheduler, stop_scheduler
@@ -28,7 +38,7 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("🚀 LTIA Radar Backend starting...")
     await MongoDB.connect()
-    start_scheduler()
+    await start_scheduler()
     logger.info("✅ LTIA Radar Backend ready")
 
     yield
@@ -66,6 +76,9 @@ app.include_router(articles.router)
 app.include_router(dashboard.router)
 app.include_router(alert_rules.router)
 app.include_router(crawler.router)
+app.include_router(llm_configs.router)
+app.include_router(general.router)
+app.include_router(llm_prompts.router)
 
 
 @app.get("/api/health", tags=["Health"])

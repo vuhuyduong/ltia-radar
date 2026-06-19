@@ -86,7 +86,7 @@ export default function SourcesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Nguồn tin</h1>
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">Nguồn tin</h1>
           <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
             Quản lý danh sách URL báo chí và diễn đàn để hệ thống rà quét
           </p>
@@ -118,7 +118,7 @@ export default function SourcesPage() {
                   setFormData({ ...formData, url: e.target.value })
                 }
                 placeholder="https://vnexpress.net/rss/..."
-                className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2 text-sm text-white placeholder:text-[hsl(var(--muted-foreground))] focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2 text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 required
               />
             </div>
@@ -133,7 +133,7 @@ export default function SourcesPage() {
                   setFormData({ ...formData, name: e.target.value })
                 }
                 placeholder="VnExpress"
-                className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2 text-sm text-white placeholder:text-[hsl(var(--muted-foreground))] focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2 text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 required
               />
             </div>
@@ -146,7 +146,7 @@ export default function SourcesPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, source_type: e.target.value })
                 }
-                className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2 text-sm text-[hsl(var(--foreground))] focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
               >
                 <option value="WEB">Website (HTML)</option>
                 <option value="RSS">RSS Feed</option>
@@ -166,7 +166,7 @@ export default function SourcesPage() {
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="rounded-lg bg-[hsl(var(--secondary))] px-4 py-2 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-white"
+              className="rounded-lg bg-[hsl(var(--secondary))] px-4 py-2 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
             >
               Hủy
             </button>
@@ -208,7 +208,7 @@ export default function SourcesPage() {
               ) : (
                 sources.map((source) => (
                   <tr key={source._id}>
-                    <td className="px-5 py-3 font-medium text-white">
+                    <td className="px-5 py-3 font-medium text-[hsl(var(--foreground))]">
                       <div className="flex items-center gap-2">
                         {source.source_type === "RSS" ? (
                           <Rss className="h-4 w-4 text-orange-400" />

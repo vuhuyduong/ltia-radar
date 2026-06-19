@@ -59,7 +59,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
               <p className="text-xs font-medium uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
                 {card.label}
               </p>
-              <p className="mt-2 text-3xl font-bold text-white">
+              <p className="mt-2 text-3xl font-bold text-[hsl(var(--foreground))]">
                 {card.format(stats?.[card.key])}
               </p>
             </div>

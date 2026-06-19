@@ -54,6 +54,9 @@ class TelegramAlertService(IAlertService):
             return False
 
         chat_id = rule.telegram_chat_id
+        if not chat_id or chat_id == "default_chat_id":
+            chat_id = settings.telegram_chat_id
+
         message = self._format_message(processed_data, rule)
 
         try:
@@ -89,6 +92,9 @@ class TelegramAlertService(IAlertService):
         if not self.bot_token:
             return False
 
+        if not chat_id or chat_id == "default_chat_id":
+            chat_id = settings.telegram_chat_id
+
         test_message = (
             "🧪 <b>LTIA RADAR — TEST ALERT</b>\n\n"
             "✅ Cấu hình Telegram hoạt động bình thường!\n"
@@ -115,8 +121,34 @@ class TelegramAlertService(IAlertService):
         self, processed_data: ProcessedData, rule: AlertRule
     ) -> str:
         """Format a rich Telegram alert message with HTML markup."""
-        impact_emoji = IMPACT_EMOJI.get(processed_data.impact_level, "")
-        sentiment_emoji = SENTIMENT_EMOJI.get(processed_data.sentiment, "")
+        # Helper to clean Enum values from potential class prefix representation
+        def clean_enum_value(val) -> str:
+            if not val:
+                return ""
+            s = getattr(val, "value", str(val))
+            if isinstance(s, str) and "." in s:
+                s = s.split(".")[-1]
+            return str(s).upper()
+
+        impact_key = clean_enum_value(processed_data.impact_level)
+        sentiment_key = clean_enum_value(processed_data.sentiment)
+
+        # Mapping for display
+        impact_display = {
+            "CRITICAL": "Khẩn cấp (CRITICAL)",
+            "HIGH": "Cao (HIGH)",
+            "MEDIUM": "Trung bình (MEDIUM)",
+            "LOW": "Thấp (LOW)",
+        }.get(impact_key, impact_key)
+
+        sentiment_display = {
+            "NEGATIVE": "Tiêu cực (NEGATIVE)",
+            "POSITIVE": "Tích cực (POSITIVE)",
+            "NEUTRAL": "Trung lập (NEUTRAL)",
+        }.get(sentiment_key, sentiment_key)
+
+        impact_emoji = IMPACT_EMOJI.get(impact_key, "")
+        sentiment_emoji = SENTIMENT_EMOJI.get(sentiment_key, "")
 
         # Categories
         categories = ", ".join(processed_data.category) if processed_data.category else "N/A"
@@ -137,12 +169,12 @@ class TelegramAlertService(IAlertService):
         rumor_flag = "\n⚠️ <b>CẢNH BÁO TIN ĐỒN</b> — Cần xác minh!" if processed_data.is_rumor else ""
 
         message = (
-            f"{impact_emoji} <b>LTIA RADAR — CẢNH BÁO {processed_data.impact_level}</b>\n"
+            f"{impact_emoji} <b>LTIA RADAR — CẢNH BÁO {impact_key}</b>\n"
             f"{'━' * 30}\n\n"
             f"📰 <b>{processed_data.title}</b>\n\n"
             f"📝 <i>{processed_data.executive_summary}</i>\n\n"
-            f"📊 Mức độ: <b>{processed_data.impact_level}</b> | "
-            f"Sắc thái: {sentiment_emoji} {processed_data.sentiment}\n"
+            f"📊 Mức độ: <b>{impact_display}</b> | "
+            f"Sắc thái: {sentiment_emoji} {sentiment_display}\n"
             f"📁 Phân loại: {categories}\n"
             f"🎯 Phạm vi: {scope}\n"
         )
@@ -152,7 +184,15 @@ class TelegramAlertService(IAlertService):
 
         message += rumor_flag
 
-        if processed_data.source_url:
+        if processed_data.citations:
+            message += "\n\n🔗 <b>Nguồn tin liên quan:</b>"
+            for cite in processed_data.citations:
+                cite_domain = getattr(cite, "domain", None) or cite.get("domain", "Nguồn")
+                cite_url = getattr(cite, "source_url", None) or cite.get("source_url", "")
+                cite_title = getattr(cite, "title", None) or cite.get("title", "")
+                if cite_url:
+                    message += f"\n• <a href='{cite_url}'>{cite_domain}</a>: {cite_title}"
+        elif processed_data.source_url:
             message += f"\n\n🔗 <a href='{processed_data.source_url}'>Xem bài viết gốc</a>"
 
         message += f"\n\n🤖 Rule: {rule.rule_name}"

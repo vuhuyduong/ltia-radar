@@ -32,25 +32,44 @@ DEFAULT_KEYWORDS = [
     "tháp không lưu Long Thành"
 ]
 
-# Default sources list (16 items)
+# Default sources list (34 items)
 DEFAULT_SOURCES = [
     {"name": "VnExpress - Thời sự", "url": "https://vnexpress.net/rss/thoi-su.rss", "source_type": "RSS"},
     {"name": "VnExpress - Kinh doanh", "url": "https://vnexpress.net/rss/kinh-doanh.rss", "source_type": "RSS"},
+    {"name": "VnExpress - Pháp luật", "url": "https://vnexpress.net/rss/phap-luat.rss", "source_type": "RSS"},
+    {"name": "VnExpress - Khoa học", "url": "https://vnexpress.net/rss/khoa-hoc.rss", "source_type": "RSS"},
     {"name": "Tuổi Trẻ - Thời sự", "url": "https://tuoitre.vn/rss/thoi-su.rss", "source_type": "RSS"},
     {"name": "Tuổi Trẻ - Pháp luật", "url": "https://tuoitre.vn/rss/phap-luat.rss", "source_type": "RSS"},
+    {"name": "Tuổi Trẻ - Kinh doanh", "url": "https://tuoitre.vn/rss/kinh-doanh.rss", "source_type": "RSS"},
+    {"name": "Tuổi Trẻ - Xe", "url": "https://tuoitre.vn/rss/xe.rss", "source_type": "RSS"},
     {"name": "Thanh Niên - Thời sự", "url": "https://thanhnien.vn/rss/thoi-su.rss", "source_type": "RSS"},
     {"name": "Thanh Niên - Kinh tế", "url": "https://thanhnien.vn/rss/kinh-te.rss", "source_type": "RSS"},
+    {"name": "Thanh Niên - Pháp luật", "url": "https://thanhnien.vn/rss/phap-luat.rss", "source_type": "RSS"},
     {"name": "VietnamNet - Thời sự", "url": "https://vietnamnet.vn/rss/thoi-su.rss", "source_type": "RSS"},
     {"name": "VietnamNet - Kinh doanh", "url": "https://vietnamnet.vn/rss/kinh-doanh.rss", "source_type": "RSS"},
+    {"name": "VietnamNet - Bất động sản", "url": "https://vietnamnet.vn/rss/bat-dong-san.rss", "source_type": "RSS"},
+    {"name": "VietnamNet - Pháp luật", "url": "https://vietnamnet.vn/rss/phap-luat.rss", "source_type": "RSS"},
     {"name": "Báo Giao thông - Thời sự", "url": "https://www.baogiaothong.vn/rss/thoi-su-2.rss", "source_type": "RSS"},
     {"name": "Báo Lao động - Thời sự", "url": "https://laodong.vn/rss/thoi-su.rss", "source_type": "RSS"},
+    {"name": "Báo Lao động - Kinh tế", "url": "https://laodong.vn/rss/kinh-te.rss", "source_type": "RSS"},
+    {"name": "Báo Lao động - Pháp luật", "url": "https://laodong.vn/rss/phap-luat.rss", "source_type": "RSS"},
+    {"name": "Dân trí - Xã hội", "url": "https://dantri.com.vn/rss/xa-hoi.rss", "source_type": "RSS"},
+    {"name": "Dân trí - Kinh doanh", "url": "https://dantri.com.vn/rss/kinh-doanh.rss", "source_type": "RSS"},
+    {"name": "Dân trí - Pháp luật", "url": "https://dantri.com.vn/rss/phap-luat.rss", "source_type": "RSS"},
     {"name": "VTV - Trong nước", "url": "https://vtv.vn/trong-nuoc.rss", "source_type": "RSS"},
     {"name": "Người Lao động - Thời sự", "url": "https://nld.com.vn/rss/thoi-su.rss", "source_type": "RSS"},
+    {"name": "Báo Nhân Dân - Xã hội", "url": "https://nhandan.vn/rss/xa-hoi-582.rss", "source_type": "RSS"},
+    {"name": "Báo Nhân Dân - Kinh tế", "url": "https://nhandan.vn/rss/kinh-te-515.rss", "source_type": "RSS"},
+    {"name": "VOV - Xã hội", "url": "https://vov.vn/rss/xa-hoi-215.rss", "source_type": "RSS"},
+    {"name": "VOV - Kinh tế", "url": "https://vov.vn/rss/kinh-te-212.rss", "source_type": "RSS"},
+    {"name": "Báo Đầu tư - Thời sự", "url": "https://baodautu.vn/rss/thoi-su.rss", "source_type": "RSS"},
+    {"name": "Báo Đầu tư - Bất động sản", "url": "https://baodautu.vn/rss/bat-dong-san.rss", "source_type": "RSS"},
     {"name": "VnExpress Tag - Sân bay Long Thành", "url": "https://vnexpress.net/tag/san-bay-long-thanh-216912", "source_type": "WEB"},
     {"name": "Tuổi Trẻ Chủ đề - Sân bay Long Thành", "url": "https://tuoitre.vn/chu-de/san-bay-long-thanh.html", "source_type": "WEB"},
     {"name": "VietnamNet Tag - Sân bay Long Thành", "url": "https://vietnamnet.vn/san-bay-long-thanh-tag8279442006764491745.html", "source_type": "WEB"},
     {"name": "Báo Giao thông - Tìm kiếm Long Thành", "url": "https://www.baogiaothong.vn/tim-kiem.html?q=s%C3%A2n+bay+Long+Th%C3%A0nh", "source_type": "WEB"},
 ]
+
 
 # Default Alert Rules
 DEFAULT_ALERT_RULES = [
@@ -72,6 +91,27 @@ DEFAULT_ALERT_RULES = [
         "is_active": True
     }
 ]
+
+# Default LLM Configs
+DEFAULT_LLM_CONFIGS = [
+    {
+        "provider": "Google Gemini",
+        "model_name": "gemini-2.5-flash",
+        "api_key": "",  # Set via UI or GEMINI_API_KEY env var after deploy
+        "is_active": True,
+        "is_default": True,
+        "description": "Google Gemini 2.5 Flash"
+    },
+    {
+        "provider": "Google Gemini",
+        "model_name": "gemini-2.0-flash",
+        "api_key": "",  # Set via UI or GEMINI_API_KEY env var after deploy
+        "is_active": False,
+        "is_default": False,
+        "description": "Google Gemini 2.0 Flash"
+    }
+]
+
 
 async def main():
     print(f"Connecting to MongoDB at: {settings.mongodb_uri}")
@@ -136,12 +176,59 @@ async def main():
     else:
         print(f"ℹ️ Alert Rules collection already has {existing_rules_count} items. Skipping seeding.")
 
+    # 4. Seed LLM Configs
+    llm_configs_col = db.llm_configs
+    print(f"Checking {len(DEFAULT_LLM_CONFIGS)} default LLM configurations...")
+    for conf in DEFAULT_LLM_CONFIGS:
+        existing = await llm_configs_col.find_one({"model_name": conf["model_name"]})
+        if not existing:
+            doc = {
+                "provider": conf["provider"],
+                "model_name": conf["model_name"],
+                "api_key": conf["api_key"],
+                "is_active": conf["is_active"],
+                "is_default": conf["is_default"],
+                "description": conf["description"],
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+            await llm_configs_col.insert_one(doc)
+            print(f"✅ LLM Config seeded: {conf['model_name']}")
+        else:
+            await llm_configs_col.update_one(
+                {"_id": existing["_id"]},
+                {"$set": {"is_default": conf["is_default"]}}
+            )
+            print(f"ℹ️ LLM Config updated (is_default={conf['is_default']}): {conf['model_name']}")
+
+    # 5. Seed LLM Prompts
+    llm_prompts_col = db.llm_prompts
+    existing_prompts_count = await llm_prompts_col.count_documents({})
+    if existing_prompts_count == 0:
+        print("Seeding default LLM prompt configuration...")
+        from app.infrastructure.llm.gemini import SYSTEM_PROMPT, BATCH_SYSTEM_PROMPT
+        default_prompt_doc = {
+            "name": "Prompt mặc định (Khuyên dùng)",
+            "system_prompt": SYSTEM_PROMPT,
+            "batch_system_prompt": BATCH_SYSTEM_PROMPT,
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        await llm_prompts_col.insert_one(default_prompt_doc)
+        print("✅ Default LLM prompt seeded successfully!")
+    else:
+        print(f"ℹ️ LLM Prompts collection already has {existing_prompts_count} items. Skipping seeding.")
+
     # Show final counts
     k_cnt = await keywords_col.count_documents({})
     s_cnt = await sources_col.count_documents({})
     r_cnt = await alert_rules_col.count_documents({})
-    print(f"Final DB State: {k_cnt} keywords, {s_cnt} sources, {r_cnt} alert rules.")
+    l_cnt = await llm_configs_col.count_documents({})
+    p_cnt = await llm_prompts_col.count_documents({})
+    print(f"Final DB State: {k_cnt} keywords, {s_cnt} sources, {r_cnt} alert rules, {l_cnt} LLM configs, {p_cnt} LLM prompts.")
     client.close()
 
 if __name__ == "__main__":
     asyncio.run(main())
+

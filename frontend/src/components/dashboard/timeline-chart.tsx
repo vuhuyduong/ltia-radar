@@ -55,25 +55,25 @@ export function TimelineChart({ data }: TimelineChartProps) {
           <LineChart data={chartData}>
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="hsla(217, 33%, 25%, 0.3)"
+              stroke="hsl(var(--border) / 0.3)"
             />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 11, fill: "hsl(215 20% 55%)" }}
+              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
               tickLine={false}
-              axisLine={{ stroke: "hsl(217 33% 25%)" }}
+              axisLine={{ stroke: "hsl(var(--border))" }}
             />
             <YAxis
-              tick={{ fontSize: 11, fill: "hsl(215 20% 55%)" }}
+              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
               tickLine={false}
-              axisLine={{ stroke: "hsl(217 33% 25%)" }}
+              axisLine={{ stroke: "hsl(var(--border))" }}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "hsl(222 47% 11%)",
-                border: "1px solid hsl(217 33% 25%)",
+                backgroundColor: "hsl(var(--card))",
+                border: "1px solid hsl(var(--border))",
                 borderRadius: "8px",
-                color: "white",
+                color: "hsl(var(--foreground))",
                 fontSize: "12px",
               }}
             />
@@ -86,7 +86,7 @@ export function TimelineChart({ data }: TimelineChartProps) {
                 };
                 return (
                   <span
-                    style={{ color: "hsl(210 40% 80%)", fontSize: "12px" }}
+                    style={{ color: "hsl(var(--foreground))", opacity: 0.8, fontSize: "12px" }}
                   >
                     {labels[value] || value}
                   </span>

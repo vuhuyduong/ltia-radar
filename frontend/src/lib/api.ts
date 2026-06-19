@@ -85,8 +85,10 @@ export const dashboardApi = {
     const query = params ? "?" + new URLSearchParams(params).toString() : "";
     return request<Record<string, unknown>>(`/api/dashboard/stats${query}`);
   },
-  topRisks: (limit = 10) =>
-    request<ApiResponse>(`/api/dashboard/top-risks?limit=${limit}`),
+  topRisks: (limit = 10, params?: Record<string, string>) => {
+    const queryParams = new URLSearchParams({ limit: String(limit), ...params });
+    return request<ApiResponse>(`/api/dashboard/top-risks?${queryParams.toString()}`);
+  },
 };
 
 // ── Alert Rules ──
@@ -114,11 +116,90 @@ export const alertRulesApi = {
 
 // ── Crawler ──
 export const crawlerApi = {
-  trigger: () =>
-    request<ApiResponse>("/api/crawler/trigger", { method: "POST" }),
+  trigger: (payload: { trigger_type: string; date_from?: string; date_to?: string }) =>
+    request<ApiResponse>("/api/crawler/trigger", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getSettings: () => request<Record<string, unknown>>("/api/crawler/settings"),
+  updateSettings: (data: Record<string, unknown>) =>
+    request<Record<string, unknown>>("/api/crawler/settings", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+};
+
+// ── LLM Configs ──
+export const llmConfigsApi = {
+  list: () => request<ApiResponse>("/api/llm-configs"),
+  create: (data: {
+    provider: string;
+    model_name: string;
+    api_key: string;
+    is_active?: boolean;
+    is_default?: boolean;
+    description?: string;
+  }) =>
+    request<ApiResponse>("/api/llm-configs", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: Record<string, unknown>) =>
+    request<ApiResponse>(`/api/llm-configs/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    request<ApiResponse>(`/api/llm-configs/${id}`, { method: "DELETE" }),
+  test: (id: string) =>
+    request<{ status: string; message: string; response?: string }>(
+      `/api/llm-configs/${id}/test`,
+      { method: "POST" }
+    ),
+  setDefault: (id: string) =>
+    request<ApiResponse>(`/api/llm-configs/${id}/set-default`, { method: "POST" }),
 };
 
 // ── Health ──
 export const healthApi = {
   check: () => request<{ status: string }>("/api/health"),
+};
+
+// ── LLM Prompts ──
+export const llmPromptsApi = {
+  list: () => request<ApiResponse>("/api/llm-prompts"),
+  create: (data: {
+    name: string;
+    system_prompt: string;
+    batch_system_prompt: string;
+    is_active?: boolean;
+  }) =>
+    request<ApiResponse>("/api/llm-prompts", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: Record<string, unknown>) =>
+    request<ApiResponse>(`/api/llm-prompts/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    request<ApiResponse>(`/api/llm-prompts/${id}`, { method: "DELETE" }),
+  setActive: (id: string) =>
+    request<ApiResponse>(`/api/llm-prompts/${id}/set-active`, { method: "POST" }),
+};
+
+// ── General Settings & Auth ──
+export const generalApi = {
+  getSettings: () => request<Record<string, unknown>>("/api/settings/general"),
+  updateSettings: (data: Record<string, unknown>) =>
+    request<Record<string, unknown>>("/api/settings/general", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  verifyPin: (pin: string, type: "user" | "admin") =>
+    request<{ success: boolean; message?: string }>("/api/settings/verify-pin", {
+      method: "POST",
+      body: JSON.stringify({ pin, type }),
+    }),
 };

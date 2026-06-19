@@ -65,16 +65,16 @@ export function SentimentChart({ data }: SentimentChartProps) {
             </Pie>
             <Tooltip
               contentStyle={{
-                backgroundColor: "hsl(222 47% 11%)",
-                border: "1px solid hsl(217 33% 25%)",
+                backgroundColor: "hsl(var(--card))",
+                border: "1px solid hsl(var(--border))",
                 borderRadius: "8px",
-                color: "white",
+                color: "hsl(var(--foreground))",
                 fontSize: "12px",
               }}
             />
             <Legend
               formatter={(value) => (
-                <span style={{ color: "hsl(210 40% 80%)", fontSize: "12px" }}>
+                <span style={{ color: "hsl(var(--foreground))", opacity: 0.8, fontSize: "12px" }}>
                   {value}
                 </span>
               )}

@@ -23,6 +23,14 @@ class ImpactLevel(str, Enum):
     LOW = "LOW"
 
 
+class ArticleCitation(BaseModel):
+    """Represents a citation/source of the same news article from different media outlet."""
+    title: str
+    source_url: str
+    domain: str
+    publish_time: Optional[datetime] = None
+
+
 class KeyEntity(BaseModel):
     """An extracted key entity (organization, person, agency)."""
     name: str
@@ -42,6 +50,10 @@ class ProcessedData(BaseModel):
     key_entities: list[KeyEntity] = Field(default_factory=list)
     executive_summary: str = ""
     is_rumor: bool = False
+    is_relevant: bool = True
     processed_time: datetime = Field(default_factory=datetime.utcnow)
+    publish_time: Optional[datetime] = None
+    citations: list[ArticleCitation] = Field(default_factory=list)
 
     model_config = {"populate_by_name": True}
+

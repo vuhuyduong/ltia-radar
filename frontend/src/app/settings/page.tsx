@@ -1,325 +1,445 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { crawlerApi } from "@/lib/api";
 import {
-  Plus,
-  Trash2,
-  Bell,
-  TestTube,
-  ToggleLeft,
-  ToggleRight,
-  Check,
-  X,
+  Clock,
+  Save,
+  Play,
+  CheckCircle2,
+  AlertCircle,
+  Calendar,
+  Settings,
+  Activity,
+  Layers,
 } from "lucide-react";
-import { alertRulesApi } from "@/lib/api";
-
-interface AlertRule {
-  _id: string;
-  rule_name: string;
-  condition_query: Record<string, string>;
-  telegram_chat_id: string;
-  is_active: boolean;
-  created_at: string;
-}
 
 export default function SettingsPage() {
-  const [rules, setRules] = useState<AlertRule[]>([]);
+  // Settings State
+  const [isEnabled, setIsEnabled] = useState(true);
+  const [frequencyType, setFrequencyType] = useState<"interval" | "daily" | "fixed_hours" | "hourly_range">("interval");
+  const [intervalMinutes, setIntervalMinutes] = useState(60);
+  const [fixedHours, setFixedHours] = useState<string[]>(["07:00", "10:00", "12:00"]);
+  const [startHour, setStartHour] = useState(7);
+  const [endHour, setEndHour] = useState(19);
+  const [stepHours, setStepHours] = useState(1);
+
+  // Manual Trigger State
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  // UI Status
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [testingId, setTestingId] = useState<string | null>(null);
-  const [testResult, setTestResult] = useState<{
-    id: string;
-    success: boolean;
-  } | null>(null);
-  const [formData, setFormData] = useState({
-    rule_name: "",
-    impact_level: "CRITICAL",
-    sentiment: "",
-    telegram_chat_id: "",
+  const [saving, setSaving] = useState(false);
+  const [triggering, setTriggering] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [triggerMsg, setTriggerMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Available hours for Fixed Hours checklist (0 to 23)
+  const availableHours = Array.from({ length: 24 }, (_, i) => {
+    const hh = i.toString().padStart(2, "0");
+    return `${hh}:00`;
   });
 
-  const fetchRules = async () => {
-    try {
-      const res = await alertRulesApi.list();
-      setRules((res.data as AlertRule[]) || []);
-    } catch (err) {
-      console.error("Failed to load rules:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchRules();
+    async function fetchSettings() {
+      try {
+        const res = await crawlerApi.getSettings();
+        if (res) {
+          setIsEnabled(res.is_enabled !== false);
+          const freq = res.frequency_type as "interval" | "daily" | "fixed_hours" | "hourly_range" | undefined;
+          if (freq) setFrequencyType(freq);
+          if (res.interval_minutes) setIntervalMinutes(Number(res.interval_minutes));
+          const hours = res.fixed_hours as string[] | undefined;
+          if (hours) setFixedHours(hours);
+          
+          const hourlyRange = res.hourly_range as Record<string, number> | undefined;
+          if (hourlyRange) {
+            setStartHour(hourlyRange.start_hour ?? 7);
+            setEndHour(hourlyRange.end_hour ?? 19);
+            setStepHours(hourlyRange.interval_hours ?? 1);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load settings:", error);
+        setMessage({ type: "error", text: "Không thể kết nối tới máy chủ để tải cấu hình." });
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchSettings();
   }, []);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    const condition_query: Record<string, string> = {};
-    if (formData.impact_level) condition_query.impact_level = formData.impact_level;
-    if (formData.sentiment) condition_query.sentiment = formData.sentiment;
-
+    setSaving(true);
+    setMessage(null);
     try {
-      await alertRulesApi.create({
-        rule_name: formData.rule_name,
-        condition_query,
-        telegram_chat_id: formData.telegram_chat_id,
-      });
-      setShowForm(false);
-      setFormData({
-        rule_name: "",
-        impact_level: "CRITICAL",
-        sentiment: "",
-        telegram_chat_id: "",
-      });
-      fetchRules();
-    } catch (err) {
-      console.error("Failed to create rule:", err);
-    }
-  };
-
-  const handleTest = async (ruleId: string) => {
-    setTestingId(ruleId);
-    setTestResult(null);
-    try {
-      await alertRulesApi.test(ruleId);
-      setTestResult({ id: ruleId, success: true });
-    } catch {
-      setTestResult({ id: ruleId, success: false });
+      const payload = {
+        is_enabled: isEnabled,
+        frequency_type: frequencyType,
+        interval_minutes: Number(intervalMinutes),
+        fixed_hours: fixedHours,
+        hourly_range: {
+          start_hour: Number(startHour),
+          end_hour: Number(endHour),
+          interval_hours: Number(stepHours),
+        },
+      };
+      await crawlerApi.updateSettings(payload);
+      setMessage({ type: "success", text: "Đã lưu và áp dụng cấu hình tần suất quét tin thành công!" });
+      setTimeout(() => setMessage(null), 5000);
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+      setMessage({ type: "error", text: "Đã xảy ra lỗi khi lưu cấu hình." });
     } finally {
-      setTestingId(null);
-      setTimeout(() => setTestResult(null), 3000);
+      setSaving(false);
     }
   };
 
-  const handleToggle = async (rule: AlertRule) => {
-    try {
-      await alertRulesApi.update(rule._id, { is_active: !rule.is_active });
-      fetchRules();
-    } catch (err) {
-      console.error("Failed to toggle rule:", err);
+  const handleToggleHour = (hour: string) => {
+    if (fixedHours.includes(hour)) {
+      setFixedHours(fixedHours.filter((h) => h !== hour));
+    } else {
+      setFixedHours([...fixedHours, hour].sort());
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Xóa quy tắc cảnh báo này?")) return;
+  const handleManualTrigger = async () => {
+    setTriggering(true);
+    setTriggerMsg(null);
     try {
-      await alertRulesApi.delete(id);
-      fetchRules();
-    } catch (err) {
-      console.error("Failed to delete rule:", err);
+      // Parse local ISO date string
+      const payload: { trigger_type: string; date_from?: string; date_to?: string } = {
+        trigger_type: "advanced",
+      };
+      if (dateFrom) {
+        payload.date_from = new Date(dateFrom).toISOString();
+      }
+      if (dateTo) {
+        payload.date_to = new Date(dateTo).toISOString();
+      }
+
+      const res = await crawlerApi.trigger(payload);
+      setTriggerMsg({
+        type: "success",
+        text: `Đã kích hoạt quét tin thủ công nâng cao thành công! Tiến trình đang chạy ngầm.`,
+      });
+      setTimeout(() => setTriggerMsg(null), 8000);
+    } catch (error: any) {
+      console.error("Failed manual trigger:", error);
+      setTriggerMsg({
+        type: "error",
+        text: error.message || "Đã xảy ra lỗi khi gửi yêu cầu quét tin.",
+      });
+    } finally {
+      setTriggering(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-500 border-t-transparent" />
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">Đang tải cấu hình...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Quy tắc Cảnh báo</h1>
-          <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
-            Cấu hình điều kiện gửi thông báo Telegram khi phát hiện tin tức
-            khớp quy tắc
-          </p>
-        </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-500/20 transition-all hover:shadow-cyan-500/30 hover:brightness-110"
-        >
-          <Plus className="h-4 w-4" />
-          Thêm quy tắc
-        </button>
+    <div className="space-y-8 max-w-4xl">
+      <div>
+        <h1 className="text-2xl font-bold text-[hsl(var(--foreground))] flex items-center gap-2">
+          <Settings className="h-6 w-6 text-cyan-500" />
+          Thiết lập Crawler
+        </h1>
+        <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
+          Quản lý tần suất quét tự động và kích hoạt tiến trình cào tin tức thủ công nâng cao.
+        </p>
       </div>
 
-      {/* Create Rule Form */}
-      {showForm && (
-        <form
-          onSubmit={handleCreate}
-          className="glass-card space-y-4 rounded-xl p-5"
-        >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-[hsl(var(--muted-foreground))]">
-                Tên quy tắc
-              </label>
-              <input
-                type="text"
-                value={formData.rule_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, rule_name: e.target.value })
-                }
-                placeholder='VD: "Cảnh báo sự cố nghiêm trọng"'
-                className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2 text-sm text-white placeholder:text-[hsl(var(--muted-foreground))] focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                required
-              />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Left column: Form settings */}
+        <div className="md:col-span-2 space-y-6">
+          <form onSubmit={handleSaveSettings} className="glass-card rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 space-y-6">
+            <div className="border-b border-[hsl(var(--border))] pb-4">
+              <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Tần suất quét tự động</h2>
+              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">Cấu hình thời gian và chế độ chạy tự động của robot thu thập thông tin.</p>
             </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-[hsl(var(--muted-foreground))]">
-                Telegram Chat ID
-              </label>
-              <input
-                type="text"
-                value={formData.telegram_chat_id}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    telegram_chat_id: e.target.value,
-                  })
-                }
-                placeholder="-1001234567890"
-                className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2 text-sm text-white placeholder:text-[hsl(var(--muted-foreground))] focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                required
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-[hsl(var(--muted-foreground))]">
-                Mức độ ảnh hưởng
-              </label>
-              <select
-                value={formData.impact_level}
-                onChange={(e) =>
-                  setFormData({ ...formData, impact_level: e.target.value })
-                }
-                className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+            {/* Toggle Enable */}
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-[hsl(var(--foreground))] block">Kích hoạt quét tự động</label>
+                <span className="text-xs text-[hsl(var(--muted-foreground))]">Cho phép robot tự động chạy theo lịch trình đã cấu hình.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEnabled(!isEnabled)}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  isEnabled ? "bg-cyan-500" : "bg-[hsl(var(--muted))]"
+                }`}
               >
-                <option value="">Tất cả</option>
-                <option value="CRITICAL">CRITICAL (Nguy kịch)</option>
-                <option value="HIGH">HIGH (Cao)</option>
-                <option value="MEDIUM">MEDIUM (Trung bình)</option>
-                <option value="LOW">LOW (Thấp)</option>
-              </select>
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    isEnabled ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
             </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-[hsl(var(--muted-foreground))]">
-                Sắc thái
-              </label>
-              <select
-                value={formData.sentiment}
-                onChange={(e) =>
-                  setFormData({ ...formData, sentiment: e.target.value })
-                }
-                className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
-              >
-                <option value="">Tất cả</option>
-                <option value="NEGATIVE">NEGATIVE (Tiêu cực)</option>
-                <option value="POSITIVE">POSITIVE (Tích cực)</option>
-                <option value="NEUTRAL">NEUTRAL (Trung lập)</option>
-              </select>
-            </div>
-          </div>
 
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-500"
-            >
-              Tạo quy tắc
-            </button>
+            {isEnabled && (
+              <>
+                {/* Frequency Type */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[hsl(var(--foreground))]">Chế độ quét tin</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: "interval", label: "Khoảng thời gian" },
+                      { id: "daily", label: "Hàng ngày" },
+                      { id: "fixed_hours", label: "Khung giờ cố định" },
+                      { id: "hourly_range", label: "Theo ca làm việc" },
+                    ].map((mode) => (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => setFrequencyType(mode.id as any)}
+                        className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
+                          frequencyType === mode.id
+                            ? "bg-cyan-500/10 border-cyan-500 text-cyan-600 dark:text-cyan-400 font-semibold"
+                            : "border-[hsl(var(--border))] hover:bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))]"
+                        }`}
+                      >
+                        {mode.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Conditional Fields based on Mode */}
+                <div className="bg-[hsl(var(--secondary))]/30 rounded-xl p-4 border border-[hsl(var(--border))]/50 space-y-4">
+                  {frequencyType === "interval" && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold text-[hsl(var(--foreground))] flex items-center gap-1.5 uppercase tracking-wide">
+                          <Clock className="h-3.5 w-3.5 text-cyan-500" />
+                          Quét mỗi N phút
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="number"
+                          min="5"
+                          max="1440"
+                          value={intervalMinutes}
+                          onChange={(e) => setIntervalMinutes(Math.max(5, Number(e.target.value)))}
+                          className="w-24 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-1.5 text-sm text-[hsl(var(--foreground))] focus:border-cyan-500 focus:outline-none"
+                        />
+                        <span className="text-xs text-[hsl(var(--muted-foreground))]">Phút (Tối thiểu 5 phút, tối đa 1440 phút / 1 ngày)</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {frequencyType === "daily" && (
+                    <div className="text-xs text-[hsl(var(--muted-foreground))] flex items-start gap-2 py-2">
+                      <CheckCircle2 className="h-4 w-4 text-cyan-500 flex-shrink-0 mt-0.5" />
+                      <p>Hệ thống sẽ chạy cào tin tự động mỗi ngày một lần vào lúc **00h00** đêm. Thích hợp cho các báo cáo tổng hợp cuối ngày.</p>
+                    </div>
+                  )}
+
+                  {frequencyType === "fixed_hours" && (
+                    <div className="space-y-3">
+                      <label className="text-xs font-semibold text-[hsl(var(--foreground))] uppercase tracking-wide flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-cyan-500" />
+                        Chọn các khung giờ trong ngày
+                      </label>
+                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                        {availableHours.map((hour) => {
+                          const isSelected = fixedHours.includes(hour);
+                          return (
+                            <button
+                              key={hour}
+                              type="button"
+                              onClick={() => handleToggleHour(hour)}
+                              className={`py-1.5 rounded-lg border text-xs transition-all ${
+                                isSelected
+                                  ? "bg-cyan-500/20 border-cyan-500 text-cyan-600 dark:text-cyan-400 font-semibold"
+                                  : "border-[hsl(var(--border))] hover:bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))]"
+                              }`}
+                            >
+                              {hour}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Bạn có thể chọn nhiều khung giờ khác nhau. Robot sẽ chạy tại thời điểm chính xác bắt đầu mỗi giờ được lựa chọn.</p>
+                    </div>
+                  )}
+
+                  {frequencyType === "hourly_range" && (
+                    <div className="space-y-4">
+                      <label className="text-xs font-semibold text-[hsl(var(--foreground))] uppercase tracking-wide flex items-center gap-1.5">
+                        <Layers className="h-3.5 w-3.5 text-cyan-500" />
+                        Quét hàng giờ trong khoảng thời gian làm việc
+                      </label>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] text-[hsl(var(--muted-foreground))] font-semibold uppercase">Giờ bắt đầu</span>
+                          <select
+                            value={startHour}
+                            onChange={(e) => setStartHour(Number(e.target.value))}
+                            className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-1.5 text-xs text-[hsl(var(--foreground))] focus:border-cyan-500 focus:outline-none"
+                          >
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <option key={i} value={i}>{i}h00</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] text-[hsl(var(--muted-foreground))] font-semibold uppercase">Giờ kết thúc</span>
+                          <select
+                            value={endHour}
+                            onChange={(e) => setEndHour(Number(e.target.value))}
+                            className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-1.5 text-xs text-[hsl(var(--foreground))] focus:border-cyan-500 focus:outline-none"
+                          >
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <option key={i} value={i}>{i}h00</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] text-[hsl(var(--muted-foreground))] font-semibold uppercase">Bước nhảy (tần suất)</span>
+                          <select
+                            value={stepHours}
+                            onChange={(e) => setStepHours(Number(e.target.value))}
+                            className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-2.5 py-1.5 text-xs text-[hsl(var(--foreground))] focus:border-cyan-500 focus:outline-none"
+                          >
+                            <option value={1}>Mỗi 1 giờ</option>
+                            <option value={2}>Mỗi 2 giờ</option>
+                            <option value={3}>Mỗi 3 giờ</option>
+                            <option value={4}>Mỗi 4 giờ</option>
+                          </select>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Ví dụ: Từ 7h00 đến 19h00, thực hiện hàng giờ (bước nhảy = 1 giờ) sẽ chạy vào 7h00, 8h00, ..., 19h00.</p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {message && (
+              <div className={`flex items-start gap-2.5 rounded-lg border p-3.5 text-xs ${
+                message.type === "success"
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                  : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+              }`}>
+                {message.type === "success" ? (
+                  <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                )}
+                <span>{message.text}</span>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/25 hover:brightness-110 hover:shadow-cyan-500/35 transition-all disabled:opacity-50"
+              >
+                {saving ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Lưu cấu hình
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Right column: Advanced Manual Trigger */}
+        <div className="space-y-6">
+          <div className="glass-card rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 space-y-5">
+            <div className="border-b border-[hsl(var(--border))] pb-3">
+              <h2 className="text-base font-semibold text-[hsl(var(--foreground))] flex items-center gap-1.5">
+                <Activity className="h-4 w-4 text-cyan-500" />
+                Quét thủ công nâng cao
+              </h2>
+              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">Kích hoạt cào tin tức tức thì với mốc thời gian lọc tùy chỉnh.</p>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-[hsl(var(--muted-foreground))] font-semibold uppercase flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5 text-cyan-500" />
+                  Từ ngày (đăng tải)
+                </label>
+                <input
+                  type="datetime-local"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-[hsl(var(--foreground))] focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-[hsl(var(--muted-foreground))] font-semibold uppercase flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5 text-cyan-500" />
+                  Đến ngày (đăng tải)
+                </label>
+                <input
+                  type="datetime-local"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-[hsl(var(--foreground))] focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {triggerMsg && (
+              <div className={`flex items-start gap-2 rounded-lg border p-3 text-[11px] ${
+                triggerMsg.type === "success"
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                  : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+              }`}>
+                {triggerMsg.type === "success" ? (
+                  <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                )}
+                <span>{triggerMsg.text}</span>
+              </div>
+            )}
+
             <button
               type="button"
-              onClick={() => setShowForm(false)}
-              className="rounded-lg bg-[hsl(var(--secondary))] px-4 py-2 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-white"
+              onClick={handleManualTrigger}
+              disabled={triggering}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 px-4 py-2.5 text-xs font-semibold text-cyan-600 dark:text-cyan-400 shadow-sm transition-all disabled:opacity-50"
             >
-              Hủy
+              {triggering ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-500 border-t-transparent" />
+              ) : (
+                <Play className="h-4 w-4 fill-cyan-400/20" />
+              )}
+              Chạy quét nâng cao
             </button>
-          </div>
-        </form>
-      )}
 
-      {/* Rules List */}
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-cyan-500 border-t-transparent" />
-        </div>
-      ) : rules.length === 0 ? (
-        <div className="glass-card rounded-xl py-16 text-center">
-          <Bell className="mx-auto h-10 w-10 text-[hsl(var(--muted-foreground))]" />
-          <p className="mt-3 text-sm text-[hsl(var(--muted-foreground))]">
-            Chưa có quy tắc cảnh báo. Tạo quy tắc để nhận thông báo Telegram.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {rules.map((rule) => (
-            <div
-              key={rule._id}
-              className="glass-card flex items-center justify-between rounded-xl p-5"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Bell className="h-4 w-4 text-cyan-400" />
-                  <h3 className="text-sm font-semibold text-white">
-                    {rule.rule_name}
-                  </h3>
-                  {!rule.is_active && (
-                    <span className="rounded-md bg-gray-700 px-2 py-0.5 text-[10px] text-gray-400">
-                      Tạm dừng
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
-                  <span>Điều kiện:</span>
-                  {Object.entries(rule.condition_query).map(([key, val]) => (
-                    <span
-                      key={key}
-                      className="rounded-md bg-[hsl(var(--secondary))] px-2 py-0.5"
-                    >
-                      {key} = {val}
-                    </span>
-                  ))}
-                  <span className="ml-2">
-                    → Chat ID: {rule.telegram_chat_id}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1">
-                {/* Test Button */}
-                <button
-                  onClick={() => handleTest(rule._id)}
-                  disabled={testingId === rule._id}
-                  className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-amber-400 transition-colors hover:bg-amber-500/10 disabled:opacity-50"
-                >
-                  {testingId === rule._id ? (
-                    <div className="h-3 w-3 animate-spin rounded-full border border-amber-400 border-t-transparent" />
-                  ) : testResult?.id === rule._id ? (
-                    testResult.success ? (
-                      <Check className="h-3 w-3 text-emerald-400" />
-                    ) : (
-                      <X className="h-3 w-3 text-red-400" />
-                    )
-                  ) : (
-                    <TestTube className="h-3 w-3" />
-                  )}
-                  Test
-                </button>
-
-                {/* Toggle */}
-                <button
-                  onClick={() => handleToggle(rule)}
-                  className="rounded-lg p-1.5 transition-colors hover:bg-[hsl(var(--secondary))]"
-                >
-                  {rule.is_active ? (
-                    <ToggleRight className="h-5 w-5 text-emerald-400" />
-                  ) : (
-                    <ToggleLeft className="h-5 w-5 text-gray-500" />
-                  )}
-                </button>
-
-                {/* Delete */}
-                <button
-                  onClick={() => handleDelete(rule._id)}
-                  className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+            <div className="text-[10px] text-[hsl(var(--muted-foreground))] flex gap-1.5 bg-[hsl(var(--secondary))]/20 p-3 rounded-lg border border-[hsl(var(--border))]/50 leading-relaxed">
+              <AlertCircle className="h-4 w-4 text-cyan-500 flex-shrink-0 mt-0.5" />
+              <p>
+                **Quét nhanh** ở thanh tiêu đề (Header) sẽ quét tự động từ thời điểm bài báo mới nhất được lưu trong hệ thống.
+                **Quét nâng cao** ở đây cho phép bạn giới hạn thời điểm xuất bản của các tin bài theo nhu cầu cụ thể.
+              </p>
             </div>
-          ))}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
