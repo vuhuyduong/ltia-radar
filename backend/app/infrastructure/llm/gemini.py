@@ -271,6 +271,7 @@ class GeminiImplementation(ILLMService):
                             system_instruction=self._cached_batch_prompt,
                             temperature=0.1,
                             max_output_tokens=4096,
+                            response_mime_type="application/json",
                         ),
                     )
 
@@ -344,6 +345,7 @@ class GeminiImplementation(ILLMService):
                         system_instruction=self._cached_sys_prompt,
                         temperature=0.1,
                         max_output_tokens=1024,
+                        response_mime_type="application/json",
                     ),
                 )
                 return self._validate_response(self._parse_llm_json(response.text))
