@@ -51,6 +51,9 @@ class MongoDB:
         await cls.db.processed_data.create_index("sentiment")
         await cls.db.processed_data.create_index("impact_level")
         await cls.db.processed_data.create_index("processed_time")
+        
+        # Text index on title for similarity deduplication
+        await cls.db.processed_data.create_index([("title", "text")], name="title_text_idx")
 
         # Sources: Index on is_active for crawler queries
         await cls.db.sources.create_index("is_active")
