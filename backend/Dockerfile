@@ -12,5 +12,7 @@ COPY . .
 # Expose port
 EXPOSE 8000
 
-# Production: no --reload, 2 workers for better concurrency
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# Production: use $PORT injected by Railway (fallback 8000), no --reload
+# Shell form is required to expand env variables like $PORT
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1
+

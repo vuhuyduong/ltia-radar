@@ -35,18 +35,38 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: startup and shutdown events."""
-    # Startup
-    logger.info("🚀 LTIA Radar Backend starting...")
-    await MongoDB.connect()
-    await start_scheduler()
+    import os
+    port = os.environ.get("PORT", "8000")
+    logger.info(f"🚀 LTIA Radar Backend starting on port {port}...")
+
+    # Connect to MongoDB — non-fatal: app stays up even if connection is slow
+    try:
+        await MongoDB.connect()
+        logger.info("✅ MongoDB connected")
+    except Exception as e:
+        logger.error(f"❌ MongoDB connection failed at startup: {e}")
+        logger.warning("⚠️  App will continue — retrying on first request")
+
+    # Start scheduler — non-fatal: scheduler may fail if DB not ready yet
+    try:
+        await start_scheduler()
+        logger.info("✅ Scheduler started")
+    except Exception as e:
+        logger.error(f"❌ Scheduler startup failed: {e}")
+        logger.warning("⚠️  App will continue without scheduler")
+
     logger.info("✅ LTIA Radar Backend ready")
 
     yield
 
     # Shutdown
     logger.info("🛑 LTIA Radar Backend shutting down...")
-    stop_scheduler()
+    try:
+        stop_scheduler()
+    except Exception:
+        pass
     await MongoDB.disconnect()
+
 
 
 # Create FastAPI app
