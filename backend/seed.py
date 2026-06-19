@@ -32,7 +32,7 @@ DEFAULT_KEYWORDS = [
     "tháp không lưu Long Thành"
 ]
 
-# Default sources list (34 items)
+# Default sources list (32 items)
 DEFAULT_SOURCES = [
     {"name": "VnExpress - Thời sự", "url": "https://vnexpress.net/rss/thoi-su.rss", "source_type": "RSS"},
     {"name": "VnExpress - Kinh doanh", "url": "https://vnexpress.net/rss/kinh-doanh.rss", "source_type": "RSS"},
@@ -65,7 +65,6 @@ DEFAULT_SOURCES = [
     {"name": "Báo Đầu tư - Bất động sản", "url": "https://baodautu.vn/rss/bat-dong-san.rss", "source_type": "RSS"},
     {"name": "VnExpress Tag - Sân bay Long Thành", "url": "https://vnexpress.net/tag/san-bay-long-thanh-216912", "source_type": "WEB"},
     {"name": "Tuổi Trẻ Chủ đề - Sân bay Long Thành", "url": "https://tuoitre.vn/chu-de/san-bay-long-thanh.html", "source_type": "WEB"},
-    {"name": "VietnamNet Tag - Sân bay Long Thành", "url": "https://vietnamnet.vn/san-bay-long-thanh-tct168128.html", "source_type": "WEB"},
     {"name": "Báo Giao thông - Tìm kiếm Long Thành", "url": "https://www.baogiaothong.vn/tim-kiem.html?q=s%C3%A2n+bay+Long+Th%C3%A0nh", "source_type": "WEB"},
 ]
 
