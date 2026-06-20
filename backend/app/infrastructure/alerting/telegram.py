@@ -187,9 +187,15 @@ class TelegramAlertService(IAlertService):
         if processed_data.citations:
             message += "\n\n🔗 <b>Nguồn tin liên quan:</b>"
             for cite in processed_data.citations:
-                cite_domain = getattr(cite, "domain", None) or cite.get("domain", "Nguồn")
-                cite_url = getattr(cite, "source_url", None) or cite.get("source_url", "")
-                cite_title = getattr(cite, "title", None) or cite.get("title", "")
+                if isinstance(cite, dict):
+                    cite_domain = cite.get("domain", "Nguồn")
+                    cite_url = cite.get("source_url", "")
+                    cite_title = cite.get("title", "")
+                else:
+                    cite_domain = getattr(cite, "domain", "Nguồn") or "Nguồn"
+                    cite_url = getattr(cite, "source_url", "") or ""
+                    cite_title = getattr(cite, "title", "") or ""
+                
                 if cite_url:
                     message += f"\n• <a href='{cite_url}'>{cite_domain}</a>: {cite_title}"
         elif processed_data.source_url:
