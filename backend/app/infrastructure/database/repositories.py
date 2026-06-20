@@ -322,7 +322,7 @@ class ProcessedDataRepository:
                     }
                 }
             },
-            {"$sort": {"impact_order": 1, "publish_time": -1, "processed_time": -1}},
+            {"$sort": {"impact_order": 1, "processed_time": -1, "_id": -1}},
             {"$limit": limit},
             {"$project": {"impact_order": 0}},
         ]

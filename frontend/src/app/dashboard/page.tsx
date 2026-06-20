@@ -13,7 +13,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(false);
   const [limitArticles, setLimitArticles] = useState<string>("all");
-  const [lastDays, setLastDays] = useState<string>("all");
+  const [lastDays, setLastDays] = useState<string>("14");
   const [targetScope, setTargetScope] = useState<string>("all");
 
   useEffect(() => {

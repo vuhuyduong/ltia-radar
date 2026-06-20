@@ -66,7 +66,8 @@ KHÔNG LIÊN QUAN (is_relevant=false) — CÁC TRƯỜNG HỢP PHỔ BIẾN CẦ
   - Đầu tư công, vốn ODA, giải ngân ngân sách của bộ ngành/tỉnh KHÁC không liên quan LTIA
   - Tin tức về sân bay KHÁC (Tân Sơn Nhất, Nội Bài, Đà Nẵng, Cam Ranh...) mà không đề cập LTIA
   - ACV được đề cập rất phụ, bài chủ yếu về chủ đề hoàn toàn khác
-  - Tin quốc tế, quốc phòng, thiên tai, chính sách chung không nhắc LTIA
+  - Tin quốc tế, quốc phòng, thiên tai, chính sách chung, ngoại giao không nhắc LTIA
+  - Tin tức chính trị, ngoại giao, video thời sự chung chung không đề cập cụ thể đến ACV hoặc Sân bay Long Thành.
   - Bài trùng từ khóa ngẫu nhiên nhưng chủ đề hoàn toàn không liên quan
 
 → Nếu is_relevant=false: đặt category=[], target_scope=[], key_entities=[], impact_level="LOW"
