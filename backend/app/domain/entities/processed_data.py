@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class Sentiment(str, Enum):
@@ -56,4 +56,13 @@ class ProcessedData(BaseModel):
     citations: list[ArticleCitation] = Field(default_factory=list)
 
     model_config = {"populate_by_name": True}
+
+    @field_validator("category", "target_scope", mode="before")
+    @classmethod
+    def ensure_list(cls, v: any) -> list[str]:
+        if isinstance(v, str):
+            return [s.strip() for s in v.split(",") if s.strip()]
+        if isinstance(v, list):
+            return v
+        return []
 
