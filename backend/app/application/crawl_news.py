@@ -205,15 +205,12 @@ class CrawlNewsUseCase:
 
             logger.info(f"🆕 New articles (after dedup): {stats['new_articles']}")
 
-            # Step 4: Similarity-based grouping & pre-LLM deduplication
-            # grouped_map: id(representative) → [grouped articles]
-            # Using id() as key avoids mutating the Pydantic model (Flaw 11 fix).
+            # Step 4: Pre-LLM deduplication against DB only
+            # We still check against DB to avoid re-processing known articles
             representative_articles: list[RawData] = []
-            grouped_map: dict[int, list[RawData]] = {}
 
-            logger.info("🔍 Performing similarity deduplication on new articles...")
+            logger.info("🔍 Checking new articles against DB...")
             for article in new_articles:
-                # 4.1 Check against DB (processed in the last 48 hours)
                 similar_doc = await self.processed_repo.find_similar_article(
                     article.title, hours_window=48
                 )
@@ -230,24 +227,10 @@ class CrawlNewsUseCase:
                     )
                     continue
 
-                # 4.2 Check against current batch representatives
-                t1 = self._normalize_title(article.title)
-                found_group = False
-                for rep in representative_articles:
-                    t2 = self._normalize_title(rep.title)
-                    if SequenceMatcher(None, t1, t2).ratio() >= 0.68:
-                        grouped_map.setdefault(id(rep), []).append(article)
-                        found_group = True
-                        logger.info(
-                            f"🔗 Grouped '{article.title}' under batch rep '{rep.title}'"
-                        )
-                        break
-
-                if not found_group:
-                    representative_articles.append(article)
+                representative_articles.append(article)
 
             logger.info(
-                f"🧠 Representative articles to process: {len(representative_articles)} "
+                f"🧠 Articles to send to LLM for clustering: {len(representative_articles)} "
                 f"(out of {len(new_articles)})"
             )
 
@@ -261,7 +244,7 @@ class CrawlNewsUseCase:
 
             for article in representative_articles:
                 content_len = len(article.raw_text or "")
-                if len(current_batch) >= 10 or (current_chars + content_len > 40000 and current_batch):
+                if len(current_batch) >= 80 or (current_chars + content_len > 320000 and current_batch):
                     batches.append(current_batch)
                     current_batch = []
                     current_chars = 0
@@ -280,19 +263,25 @@ class CrawlNewsUseCase:
                 ]
 
                 try:
-                    # extract_insights_batch guarantees len(result) == len(input) (Flaw 7 fix)
-                    await self._rate_limiter.acquire()
-                    insights_list = await self.llm_service.extract_insights_batch(batch_data)
+                    clusters = await self.llm_service.extract_insights_batch(batch_data)
                     logger.info(f"✅ Batch of {len(batch)} processed successfully")
 
-                    for article, insights in zip(batch, insights_list):
+                    for cluster in clusters:
+                        indices = cluster.pop("source_indices", [])
+                        if not indices:
+                            continue
+                            
+                        primary_idx = indices[0]
+                        primary_article = batch[primary_idx]
+                        grouped_articles = [batch[i] for i in indices[1:] if i < len(batch)]
+
                         try:
                             await self._store_and_alert(
-                                article,
-                                insights,
+                                primary_article,
+                                cluster,
                                 active_rules,
                                 stats,
-                                grouped_articles=grouped_map.get(id(article), []),
+                                grouped_articles=grouped_articles,
                             )
                         except Exception as store_err:
                             logger.error(f"Error storing/alerting: {store_err}")
@@ -301,23 +290,33 @@ class CrawlNewsUseCase:
                 except RuntimeError:
                     # Total failure across all keys — fall back to one-by-one
                     logger.warning("⚠️ Batch failed for all keys. Falling back to one-by-one...")
-                    for article in batch:
+                    # extract_insights_batch now returns clustered insights
+                    await self._rate_limiter.acquire()
+                    clusters = await self.llm_service.extract_insights_batch(batch_data)
+
+                    for cluster in clusters:
+                        indices = cluster.pop("source_indices", [])
+                        if not indices:
+                            continue
+                            
+                        # First index is primary
+                        primary_idx = indices[0]
+                        primary_article = batch[primary_idx]
+                        
+                        # Remaining indices are grouped articles
+                        grouped_articles = [batch[i] for i in indices[1:] if i < len(batch)]
+
                         try:
-                            await self._rate_limiter.acquire()
-                            insights = await self.llm_service.extract_insight(
-                                raw_text=article.raw_text,
-                                title=article.title,
-                            )
                             await self._store_and_alert(
-                                article,
-                                insights,
+                                primary_article,
+                                cluster,
                                 active_rules,
                                 stats,
-                                grouped_articles=grouped_map.get(id(article), []),
+                                grouped_articles=grouped_articles,
                             )
                         except Exception as e:
                             logger.error(
-                                f"One-by-one failed for {article.source_url}: {e}"
+                                f"Failed to store cluster for {primary_article.source_url}: {e}"
                             )
                             stats["errors"] += 1
 

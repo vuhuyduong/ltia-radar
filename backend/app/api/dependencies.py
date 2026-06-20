@@ -4,6 +4,8 @@ Following Clean Architecture dependency injection (PRD Section 9.1).
 """
 
 from app.application.crawl_news import CrawlNewsUseCase
+from app.domain.interfaces.llm_service import ILLMService
+from app.infrastructure.llm.factory import DynamicLLMService
 from app.infrastructure.alerting.telegram import TelegramAlertService
 from app.infrastructure.crawler.html_crawler import HTMLCrawler
 from app.infrastructure.crawler.rss_crawler import RSSCrawler
@@ -59,9 +61,9 @@ def get_general_settings_repo() -> GeneralSettingsRepository:
 
 
 # ── Service factories ──
-def get_llm_service() -> GeminiImplementation:
-    """Factory for LLM service. Switch implementation here to swap AI provider."""
-    return GeminiImplementation()
+def get_llm_service() -> ILLMService:
+    """Dependency injection for LLM service."""
+    return DynamicLLMService()
 
 
 def get_alert_service() -> TelegramAlertService:

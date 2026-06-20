@@ -107,6 +107,14 @@ DEFAULT_LLM_CONFIGS = [
         "is_active": False,
         "is_default": False,
         "description": "Google Gemini 3.0 Flash (Preview)"
+    },
+    {
+        "provider": "groq",
+        "model_name": "llama-3.3-70b-versatile",
+        "api_key": "",  # Set via UI or ENV after deploy
+        "is_active": True,
+        "is_default": False,
+        "description": "Groq Llama 3.3 70B Versatile"
     }
 ]
 
@@ -199,24 +207,35 @@ async def main():
             )
             print(f"ℹ️ LLM Config updated (is_default={conf['is_default']}): {conf['model_name']}")
 
-    # 5. Seed LLM Prompts
+    # 5. Seed / Sync LLM Prompts (always upsert to keep in sync with gemini.py)
     llm_prompts_col = db.llm_prompts
-    existing_prompts_count = await llm_prompts_col.count_documents({})
-    if existing_prompts_count == 0:
-        print("Seeding default LLM prompt configuration...")
-        from app.infrastructure.llm.gemini import SYSTEM_PROMPT, BATCH_SYSTEM_PROMPT
+    from app.infrastructure.llm.gemini import SYSTEM_PROMPT, BATCH_SYSTEM_PROMPT
+    existing_prompt = await llm_prompts_col.find_one({"is_active": True})
+    if existing_prompt:
+        await llm_prompts_col.update_one(
+            {"_id": existing_prompt["_id"]},
+            {
+                "$set": {
+                    "name": "Prompt CRAFT v2 (Khuyên dùng)",
+                    "system_prompt": SYSTEM_PROMPT,
+                    "batch_system_prompt": BATCH_SYSTEM_PROMPT,
+                    "updated_at": datetime.utcnow(),
+                }
+            },
+        )
+        print("✅ LLM Prompt synced (upsert) with latest from gemini.py")
+    else:
         default_prompt_doc = {
-            "name": "Prompt mặc định (Khuyên dùng)",
+            "name": "Prompt CRAFT v2 (Khuyên dùng)",
             "system_prompt": SYSTEM_PROMPT,
             "batch_system_prompt": BATCH_SYSTEM_PROMPT,
             "is_active": True,
             "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
+            "updated_at": datetime.utcnow(),
         }
         await llm_prompts_col.insert_one(default_prompt_doc)
         print("✅ Default LLM prompt seeded successfully!")
-    else:
-        print(f"ℹ️ LLM Prompts collection already has {existing_prompts_count} items. Skipping seeding.")
+
 
     # Show final counts
     k_cnt = await keywords_col.count_documents({})
