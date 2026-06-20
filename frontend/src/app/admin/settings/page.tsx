@@ -17,6 +17,7 @@ export default function AdminSettingsPage() {
   // General Settings States
   const [pinEnabled, setPinEnabled] = useState(true);
   const [pinCode, setPinCode] = useState("2026");
+  const [adminPinCode, setAdminPinCode] = useState("LT2026");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -28,6 +29,7 @@ export default function AdminSettingsPage() {
         if (res) {
           setPinEnabled(res.pin_enabled !== false);
           setPinCode((res.pin_code as string) || "2026");
+          setAdminPinCode((res.admin_pin_code as string) || "LT2026");
         }
       } catch (err) {
         console.error("Failed to load settings:", err);
@@ -47,6 +49,7 @@ export default function AdminSettingsPage() {
       await generalApi.updateSettings({
         pin_enabled: pinEnabled,
         pin_code: pinCode,
+        admin_pin_code: adminPinCode,
       });
       setMsg({ type: "success", text: "Đã lưu cài đặt chung thành công!" });
       setTimeout(() => setMsg(null), 5000);
@@ -146,9 +149,22 @@ export default function AdminSettingsPage() {
                       className="w-48 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2 text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/50 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                       required
                     />
-                    <p className="text-[10px] text-[hsl(var(--muted-foreground))]">PIN trang quản trị được cố định bảo mật là **LT2026**.</p>
                   </div>
                 )}
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[hsl(var(--foreground))]">Mã PIN Quản trị (Admin)</label>
+                  <input
+                    type="text"
+                    maxLength={20}
+                    value={adminPinCode}
+                    onChange={(e) => setAdminPinCode(e.target.value)}
+                    placeholder="LT2026"
+                    className="w-48 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] px-3 py-2 text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]/50 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    required
+                  />
+                  <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Bảo vệ quyền truy cập vào trang thiết lập này.</p>
+                </div>
 
                 {msg && (
                   <div className={`flex items-start gap-2.5 rounded-lg border p-3.5 text-xs ${

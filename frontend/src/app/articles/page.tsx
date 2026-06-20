@@ -44,31 +44,8 @@ const sentimentLabel: Record<string, string> = {
   NEUTRAL: "Trung lập",
 };
 
-const getFriendlyDomain = (url: string): string => {
-  if (!url) return "Nguồn";
-  try {
-    const hostname = new URL(url).hostname;
-    const domain = hostname.startsWith("www.") ? hostname.substring(4) : hostname;
-    const domainLower = domain.toLowerCase();
-    if (domainLower.includes("vnexpress")) return "VnExpress";
-    if (domainLower.includes("tuoitre")) return "Tuổi Trẻ";
-    if (domainLower.includes("thanhnien")) return "Thanh Niên";
-    if (domainLower.includes("vietnamnet")) return "VietnamNet";
-    if (domainLower.includes("dantri")) return "Dân trí";
-    if (domainLower.includes("laodong")) return "Lao Động";
-    if (domainLower.includes("vtv")) return "VTV";
-    if (domainLower.includes("nld.com.vn")) return "Người Lao Động";
-    if (domainLower.includes("baogiaothong")) return "Báo Giao thông";
-    if (domainLower.includes("nhandan")) return "Báo Nhân Dân";
-    if (domainLower.includes("vov.vn")) return "VOV";
-    if (domainLower.includes("baodautu")) return "Báo Đầu tư";
-    
-    const parts = domain.split(".");
-    return parts.length > 1 ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : domain;
-  } catch (e) {
-    return "Nguồn";
-  }
-};
+import { getFriendlyDomain, getEarliestPublishDate } from "@/lib/utils";
+
 
 export default function ArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -363,7 +340,7 @@ export default function ArticlesPage() {
 
                   <div className="flex items-center gap-3 text-[10px] text-[hsl(var(--muted-foreground))]">
                     <span>
-                      {formatArticleDate(article.publish_time || article.processed_time)}
+                      {formatArticleDate(getEarliestPublishDate(article))}
                     </span>
                   </div>
                 </div>

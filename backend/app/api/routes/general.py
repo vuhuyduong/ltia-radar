@@ -47,9 +47,11 @@ async def verify_pin(
     repo: GeneralSettingsRepository = Depends(get_general_settings_repo),
 ):
     """Verify access PIN for user or admin gates."""
+    config = await repo.get_settings()
     # Verify Admin PIN
     if payload.type == "admin":
-        if payload.pin == "LT2026":
+        expected_admin_pin = config.get("admin_pin_code", "LT2026")
+        if payload.pin == expected_admin_pin:
             return {"success": True}
         return {"success": False, "message": "Mã PIN Admin không chính xác."}
 

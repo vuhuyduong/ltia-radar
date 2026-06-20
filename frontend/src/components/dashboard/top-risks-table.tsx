@@ -20,38 +20,15 @@ const sentimentBadge: Record<string, string> = {
   NEUTRAL: "badge-neutral",
 };
 
-const getFriendlyDomain = (url: string): string => {
-  if (!url) return "Nguồn";
-  try {
-    const hostname = new URL(url).hostname;
-    const domain = hostname.startsWith("www.") ? hostname.substring(4) : hostname;
-    const domainLower = domain.toLowerCase();
-    if (domainLower.includes("vnexpress")) return "VnExpress";
-    if (domainLower.includes("tuoitre")) return "Tuổi Trẻ";
-    if (domainLower.includes("thanhnien")) return "Thanh Niên";
-    if (domainLower.includes("vietnamnet")) return "VietnamNet";
-    if (domainLower.includes("dantri")) return "Dân trí";
-    if (domainLower.includes("laodong")) return "Lao Động";
-    if (domainLower.includes("vtv")) return "VTV";
-    if (domainLower.includes("nld.com.vn")) return "Người Lao Động";
-    if (domainLower.includes("baogiaothong")) return "Báo Giao thông";
-    if (domainLower.includes("nhandan")) return "Báo Nhân Dân";
-    if (domainLower.includes("vov.vn")) return "VOV";
-    if (domainLower.includes("baodautu")) return "Báo Đầu tư";
-    
-    const parts = domain.split(".");
-    return parts.length > 1 ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : domain;
-  } catch (e) {
-    return "Nguồn";
-  }
-};
+import { getFriendlyDomain, getEarliestPublishDate } from "@/lib/utils";
+
 
 export function TopRisksTable({ data }: TopRisksTableProps) {
   return (
     <div className="chart-container overflow-hidden">
       <div className="border-b border-[hsl(var(--border))] px-5 py-4">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">
-          Top 10 — Tin tức rủi ro cao nhất
+          Top 10 — Tin tức có mức ảnh hưởng cao
         </h3>
       </div>
 
@@ -86,7 +63,7 @@ export function TopRisksTable({ data }: TopRisksTableProps) {
                   </td>
                   <td className="px-5 py-3 text-[hsl(var(--muted-foreground))] whitespace-nowrap">
                     {(() => {
-                      const res = formatTableDate((item.publish_time || item.processed_time) as string);
+                      const res = formatTableDate(getEarliestPublishDate(item) as string);
                       return (
                         <div className="flex flex-col text-xs">
                           <span className="font-medium text-[hsl(var(--foreground))]">{res.line1}</span>

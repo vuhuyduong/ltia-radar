@@ -49,6 +49,8 @@ const POPULAR_MODELS = [
   { provider: "Google Gemini", model: "gemini-3-flash-preview", label: "Gemini 3 Flash" },
   { provider: "Google Gemini", model: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
   { provider: "Google Gemini", model: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+  { provider: "Groq", model: "llama-3.3-70b-versatile", label: "Llama 3.3 70B (Groq)" },
+  { provider: "Groq", model: "llama-3.1-8b-instant", label: "Llama 3.1 8B (Groq)" },
   { provider: "OpenAI", model: "gpt-4o", label: "GPT-4o" },
   { provider: "OpenAI", model: "gpt-4o-mini", label: "GPT-4o Mini" },
   { provider: "Anthropic", model: "claude-3-5-sonnet", label: "Claude 3.5 Sonnet" },
