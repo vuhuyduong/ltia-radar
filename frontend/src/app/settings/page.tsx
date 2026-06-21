@@ -12,6 +12,9 @@ import {
   Settings,
   Activity,
   Layers,
+  List,
+  Database,
+  RefreshCw,
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -35,11 +38,51 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [triggerMsg, setTriggerMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // System Logs State
+  const [activeTab, setActiveTab] = useState<"news" | "schedule" | "history">("news");
+  const [logs, setLogs] = useState<{
+    news_stats: {
+      total_crawled: number;
+      total_relevant: number;
+      total_irrelevant: number;
+    };
+    schedule_stats: {
+      is_enabled: boolean;
+      frequency_type: string;
+      frequency_description: string;
+      last_run: string | null;
+      next_run: string | null;
+    };
+    recent_runs: {
+      _id: string;
+      timestamp: string;
+      status: string;
+      crawled_count: number;
+      new_articles: number;
+      processed_count: number;
+      alerts_sent: number;
+      errors: number;
+      elapsed_seconds: number;
+      trigger_type: string;
+    }[];
+  } | null>(null);
+
   // Available hours for Fixed Hours checklist (0 to 23)
   const availableHours = Array.from({ length: 24 }, (_, i) => {
     const hh = i.toString().padStart(2, "0");
     return `${hh}:00`;
   });
+
+  const fetchLogs = async () => {
+    try {
+      const logRes = await crawlerApi.getLogs();
+      if (logRes) {
+        setLogs(logRes as any);
+      }
+    } catch (error) {
+      console.error("Failed to load logs:", error);
+    }
+  };
 
   useEffect(() => {
     async function fetchSettings() {
@@ -68,6 +111,7 @@ export default function SettingsPage() {
       }
     }
     fetchSettings();
+    fetchLogs();
   }, []);
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -88,6 +132,7 @@ export default function SettingsPage() {
       };
       await crawlerApi.updateSettings(payload);
       setMessage({ type: "success", text: "Đã lưu và áp dụng cấu hình tần suất quét tin thành công!" });
+      fetchLogs();
       setTimeout(() => setMessage(null), 5000);
     } catch (error) {
       console.error("Failed to save settings:", error);
@@ -125,7 +170,10 @@ export default function SettingsPage() {
         type: "success",
         text: `Đã kích hoạt quét tin thủ công nâng cao thành công! Tiến trình đang chạy ngầm.`,
       });
-      setTimeout(() => setTriggerMsg(null), 8000);
+      setTimeout(() => {
+        setTriggerMsg(null);
+        fetchLogs();
+      }, 5000);
     } catch (error: any) {
       console.error("Failed manual trigger:", error);
       setTriggerMsg({
@@ -439,6 +487,184 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Nhật ký hoạt động của hệ thống */}
+      <div className="glass-card rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 space-y-6">
+        <div className="flex items-center justify-between border-b border-[hsl(var(--border))] pb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-[hsl(var(--foreground))] flex items-center gap-2">
+              <Activity className="h-5 w-5 text-cyan-500" />
+              Nhật ký hoạt động của hệ thống
+            </h2>
+            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
+              Thống kê tin tức thu thập, trạng thái lập lịch và lịch sử vận hành backend.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={fetchLogs}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[hsl(var(--border))] hover:bg-[hsl(var(--secondary))] text-xs text-[hsl(var(--foreground))] transition-all"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Làm mới
+          </button>
+        </div>
+
+        {/* Tab Selection */}
+        <div className="flex gap-2 border-b border-[hsl(var(--border))] pb-3">
+          {[
+            { id: "news", label: "Tin tức", icon: Database },
+            { id: "schedule", label: "Lịch quét tin", icon: Clock },
+            { id: "history", label: "Lịch sử chạy", icon: List },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  activeTab === tab.id
+                    ? "bg-cyan-500/10 border border-cyan-500 text-cyan-600 dark:text-cyan-400"
+                    : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tab Contents */}
+        {logs ? (
+          <div className="space-y-4 pt-2">
+            {activeTab === "news" && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-[hsl(var(--secondary))]/25 rounded-xl p-4 border border-[hsl(var(--border))]/50 space-y-1">
+                  <span className="text-[10px] text-[hsl(var(--muted-foreground))] uppercase font-bold tracking-wider">Tổng tin đã crawl</span>
+                  <p className="text-2xl font-bold text-[hsl(var(--foreground))]">{logs.news_stats.total_crawled}</p>
+                  <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Tổng số tin tức thô thu thập được từ nguồn.</p>
+                </div>
+                <div className="bg-cyan-500/5 rounded-xl p-4 border border-cyan-500/20 space-y-1">
+                  <span className="text-[10px] text-cyan-600 dark:text-cyan-400 uppercase font-bold tracking-wider">Tin tức liên quan</span>
+                  <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">{logs.news_stats.total_relevant}</p>
+                  <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Tin tức có giá trị, liên quan đến các dự án giám sát.</p>
+                </div>
+                <div className="bg-[hsl(var(--secondary))]/25 rounded-xl p-4 border border-[hsl(var(--border))]/50 space-y-1">
+                  <span className="text-[10px] text-[hsl(var(--muted-foreground))] uppercase font-bold tracking-wider">Tin không liên quan</span>
+                  <p className="text-2xl font-bold text-[hsl(var(--foreground))]">{logs.news_stats.total_irrelevant}</p>
+                  <p className="text-[10px] text-[hsl(var(--muted-foreground))]">Tin tức bị lọc bỏ do không khớp từ khóa giám sát.</p>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "schedule" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-[hsl(var(--secondary))]/25 rounded-xl p-4 border border-[hsl(var(--border))]/50 space-y-3.5 text-xs">
+                  <div className="flex justify-between items-center border-b border-[hsl(var(--border))]/50 pb-2">
+                    <span className="text-[10px] text-[hsl(var(--muted-foreground))] uppercase font-bold">Lập lịch tự động</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      logs.schedule_stats.is_enabled ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                    }`}>
+                      {logs.schedule_stats.is_enabled ? "BẬT" : "TẮT"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[hsl(var(--muted-foreground))]">Tần suất thiết lập:</span>
+                    <span className="font-semibold text-[hsl(var(--foreground))]">{logs.schedule_stats.frequency_description}</span>
+                  </div>
+                </div>
+
+                <div className="bg-[hsl(var(--secondary))]/25 rounded-xl p-4 border border-[hsl(var(--border))]/50 space-y-3.5 text-xs">
+                  <div className="flex justify-between items-center border-b border-[hsl(var(--border))]/50 pb-2">
+                    <span className="text-[10px] text-[hsl(var(--muted-foreground))] uppercase font-bold">Thời gian vận hành</span>
+                    <span className="text-[10px] text-[hsl(var(--muted-foreground))]">GMT+7</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[hsl(var(--muted-foreground))]">Lần quét gần nhất:</span>
+                    <span className="font-semibold text-[hsl(var(--foreground))]">
+                      {logs.schedule_stats.last_run ? new Date(logs.schedule_stats.last_run).toLocaleString("vi-VN") : "Chưa có"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[hsl(var(--muted-foreground))]">Lần quét dự kiến tiếp:</span>
+                    <span className="font-semibold text-cyan-600 dark:text-cyan-400">
+                      {logs.schedule_stats.next_run ? new Date(logs.schedule_stats.next_run).toLocaleString("vi-VN") : "Không lập lịch"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "history" && (
+              <div className="overflow-x-auto rounded-xl border border-[hsl(var(--border))]">
+                <table className="min-w-full divide-y divide-[hsl(var(--border))] text-left text-xs">
+                  <thead className="bg-[hsl(var(--secondary))]/35 font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                    <tr>
+                      <th className="px-4 py-3">Thời gian</th>
+                      <th className="px-4 py-3">Trạng thái</th>
+                      <th className="px-4 py-3">Kiểu kích hoạt</th>
+                      <th className="px-4 py-3 text-center">Tin thô</th>
+                      <th className="px-4 py-3 text-center">Tin mới</th>
+                      <th className="px-4 py-3 text-center">Liên quan</th>
+                      <th className="px-4 py-3 text-center">Cảnh báo</th>
+                      <th className="px-4 py-3 text-right">Thời gian chạy</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[hsl(var(--border))]/60">
+                    {logs.recent_runs.length > 0 ? (
+                      logs.recent_runs.map((run) => (
+                        <tr key={run._id} className="hover:bg-[hsl(var(--secondary))]/10 transition-colors">
+                          <td className="px-4 py-3 font-medium whitespace-nowrap text-[hsl(var(--foreground))]">
+                            {new Date(run.timestamp).toLocaleString("vi-VN")}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              run.status === "success"
+                                ? "bg-emerald-500/10 text-emerald-500"
+                                : run.status === "failed"
+                                ? "bg-rose-500/10 text-rose-500"
+                                : "bg-amber-500/10 text-amber-500"
+                            }`}>
+                              {run.status === "success" ? "Thành công" : run.status === "failed" ? "Thất bại" : "Lỗi một phần"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-medium text-[hsl(var(--muted-foreground))]">
+                            {run.trigger_type === "scheduled"
+                              ? "Tự động theo lịch"
+                              : run.trigger_type === "manual_fast"
+                              ? "Quét nhanh thủ công"
+                              : "Quét nâng cao thủ công"}
+                          </td>
+                          <td className="px-4 py-3 text-center text-[hsl(var(--foreground))]">{run.crawled_count}</td>
+                          <td className="px-4 py-3 text-center text-[hsl(var(--foreground))]">{run.new_articles}</td>
+                          <td className="px-4 py-3 text-center text-cyan-600 dark:text-cyan-400 font-semibold">{run.processed_count}</td>
+                          <td className="px-4 py-3 text-center text-[hsl(var(--foreground))]">{run.alerts_sent}</td>
+                          <td className="px-4 py-3 text-right text-[hsl(var(--muted-foreground))] font-mono">
+                            {run.elapsed_seconds.toFixed(1)}s
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">
+                          Chưa có lịch sử chạy crawl tin tức.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <RefreshCw className="h-6 w-6 animate-spin text-cyan-500" />
+            <p className="text-xs text-[hsl(var(--muted-foreground))]">Đang tải nhật ký hoạt động hệ thống...</p>
+          </div>
+        )}
       </div>
     </div>
   );

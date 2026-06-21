@@ -133,6 +133,7 @@ class CrawlNewsUseCase:
         self,
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
+        trigger_type: str = "scheduled",
     ) -> dict:
         """
         Run a full crawl cycle.
@@ -331,6 +332,25 @@ class CrawlNewsUseCase:
             f"Processed: {stats['processed']}, Alerts: {stats['alerts_sent']}, "
             f"Errors: {stats['errors']}"
         )
+
+        try:
+            db = self.raw_data_repo.collection.database
+            log_doc = {
+                "timestamp": start_time,
+                "status": "success" if stats["errors"] == 0 else "failed" if stats["processed"] == 0 and stats["crawled"] == 0 else "partial_success",
+                "crawled_count": stats["crawled"],
+                "new_articles": stats["new_articles"],
+                "processed_count": stats["processed"],
+                "alerts_sent": stats["alerts_sent"],
+                "errors": stats["errors"],
+                "elapsed_seconds": elapsed,
+                "trigger_type": trigger_type
+            }
+            await db.crawl_logs.insert_one(log_doc)
+            logger.info("💾 Saved crawl activity log to database")
+        except Exception as log_err:
+            logger.error(f"Failed to save crawl log: {log_err}")
+
         return stats
 
     # ------------------------------------------------------------------

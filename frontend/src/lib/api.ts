@@ -127,6 +127,7 @@ export const crawlerApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  getLogs: () => request<Record<string, any>>("/api/crawler/logs"),
 };
 
 // ── LLM Configs ──
