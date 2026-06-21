@@ -183,9 +183,44 @@ class HTMLCrawler(ICrawlerBase):
 
     def _extract_body_text(self, soup: BeautifulSoup) -> str:
         """Extract main article body text."""
-        # Remove unwanted elements
+        # 1. Remove standard unwanted layout elements
         for tag in soup.find_all(["script", "style", "nav", "footer", "header", "aside"]):
             tag.decompose()
+
+        # 2. Decompose elements with classes or ids specifically indicating related news, widgets, comments or ads
+        for tag in soup.find_all(True):
+            if not tag.name or not hasattr(tag, "attrs") or tag.attrs is None:
+                continue
+            classes = [str(c).lower() for c in tag.get("class", [])] if tag.get("class") else []
+            tag_id = str(tag.get("id", "")).lower()
+            
+            is_unwanted = False
+            for cls in classes:
+                if any(w in cls for w in [
+                    "related", "lien-quan", "recommend", "cung-chuyen-muc", "xem-them", 
+                    "doc-them", "insert-box", "link-inline", "sidebar", "advertis", 
+                    "comment", "social-share", "fb-comments", "social-widget"
+                ]):
+                    is_unwanted = True
+                    break
+            
+            if not is_unwanted and tag_id:
+                if any(w in tag_id for w in [
+                    "related", "recommend", "sidebar", "advertis", "comment"
+                ]):
+                    is_unwanted = True
+                    
+            if is_unwanted:
+                tag.decompose()
+                continue
+
+            # Decompose inline related paragraphs
+            if tag.name == "p":
+                txt = tag.get_text(strip=True).lower()
+                if len(txt) < 300 and any(txt.startswith(prefix) for prefix in [
+                    "xem thêm:", "xem thêm", "đọc thêm:", "đọc thêm", "tin liên quan:", "tin liên quan"
+                ]):
+                    tag.decompose()
 
         # Try common article containers
         article_selectors = [

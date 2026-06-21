@@ -56,7 +56,11 @@ class RSSCrawler(ICrawlerBase):
                 if hasattr(entry, "content") and entry.content:
                     content = entry.content[0].get("value", "")
 
-                full_text = f"{title} {summary} {content}"
+                # Clean HTML elements (e.g. related articles list) from RSS summaries/contents
+                clean_summary = self._clean_rss_html(summary)
+                clean_content = self._clean_rss_html(content)
+
+                full_text = f"{title} {clean_summary} {clean_content}"
 
                 # Filter by keywords (case-insensitive)
                 if keywords and not any(
@@ -75,7 +79,7 @@ class RSSCrawler(ICrawlerBase):
                 # Extract domain
                 domain = urlparse(link).netloc if link else urlparse(str(source.url)).netloc
 
-                # Extract images from content
+                # Extract images from content (needs raw HTML)
                 image_links = self._extract_images(content or summary)
 
                 raw = RawData(
@@ -83,7 +87,7 @@ class RSSCrawler(ICrawlerBase):
                     domain=domain,
                     title=title,
                     author_poster=entry.get("author", ""),
-                    raw_text=content or summary,
+                    raw_text=clean_content or clean_summary,
                     image_links=image_links,
                     publish_time=publish_time,
                 )
@@ -114,3 +118,50 @@ class RSSCrawler(ICrawlerBase):
             except Exception:
                 pass
         return images
+
+    def _clean_rss_html(self, html_content: str) -> str:
+        """Parse RSS HTML content, remove related news/lists, and return clean text."""
+        if not html_content:
+            return ""
+        from bs4 import BeautifulSoup
+        try:
+            soup = BeautifulSoup(html_content, "html.parser")
+            
+            # Decompose common related news list tags (ul, ol, table) in feeds
+            for tag in soup.find_all(["ul", "ol", "table"]):
+                tag.decompose()
+                
+            # Decompose divs/paragraphs with classes/styles indicating related news
+            for tag in soup.find_all(True):
+                if not tag.name or not hasattr(tag, "attrs") or tag.attrs is None:
+                    continue
+                classes = [str(c).lower() for c in tag.get("class", [])] if tag.get("class") else []
+                tag_style = str(tag.get("style", "")).lower()
+                
+                is_unwanted = False
+                for cls in classes:
+                    if any(w in cls for w in ["related", "lien-quan", "recommend", "box-tin", "cung-chuyen-muc"]):
+                        is_unwanted = True
+                        break
+                if not is_unwanted and any(w in tag_style for w in ["clear: both", "clear:both"]):
+                    is_unwanted = True
+                    
+                if is_unwanted:
+                    tag.decompose()
+                    continue
+                    
+                # Decompose inline related paragraphs
+                if tag.name == "p":
+                    txt = tag.get_text(strip=True).lower()
+                    if len(txt) < 300 and any(txt.startswith(prefix) for prefix in [
+                        "xem thêm:", "xem thêm", "đọc thêm:", "đọc thêm", "tin liên quan:", "tin liên quan"
+                    ]):
+                        tag.decompose()
+                        
+            # Get clean text
+            return soup.get_text(separator=" ", strip=True)
+        except Exception:
+            # Fallback to simple HTML tag stripping if bs4 fails
+            import re
+            clean = re.sub(r"<[^>]*>", " ", html_content)
+            return " ".join(clean.split())
