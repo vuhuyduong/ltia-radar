@@ -30,7 +30,12 @@ async def main():
                         "domain": doc.get("domain", ""),
                         "publish_time": doc.get("publish_time") or doc.get("processed_time")
                     })
-                cluster["citations"] = existing_c
+                from app.domain.utils.citation_filter import filter_outlier_citations
+                cluster["citations"] = filter_outlier_citations(
+                    citations=existing_c,
+                    ref_time=cluster.get("publish_time"),
+                    primary_source_url=cluster.get("source_url")
+                )
                 merged_count += 1
                 break
         if not found:
@@ -43,7 +48,12 @@ async def main():
                     "domain": doc.get("domain", ""),
                     "publish_time": doc.get("publish_time") or doc.get("processed_time")
                 })
-            doc["citations"] = existing_c
+            from app.domain.utils.citation_filter import filter_outlier_citations
+            doc["citations"] = filter_outlier_citations(
+                citations=existing_c,
+                ref_time=doc.get("publish_time"),
+                primary_source_url=doc.get("source_url")
+            )
             clusters.append(doc)
             
     print(f"Merged {merged_count}")

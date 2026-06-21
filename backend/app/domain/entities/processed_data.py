@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class Sentiment(str, Enum):
@@ -65,4 +65,15 @@ class ProcessedData(BaseModel):
         if isinstance(v, list):
             return v
         return []
+
+    @model_validator(mode="after")
+    def filter_citations(self) -> "ProcessedData":
+        if self.citations:
+            from app.domain.utils.citation_filter import filter_outlier_citations
+            self.citations = filter_outlier_citations(
+                citations=self.citations,
+                ref_time=self.publish_time,
+                primary_source_url=self.source_url,
+            )
+        return self
 
