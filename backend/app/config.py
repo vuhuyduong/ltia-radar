@@ -28,12 +28,18 @@ class Settings(BaseSettings):
         default=["http://localhost:3000", "http://frontend:3000"]
     )
 
-    # Crawler
+    # Crawler & LLM Rate Limits (Google AI Studio Free Tier conservative defaults per key/project)
     crawler_interval_minutes: int = Field(default=60)
     crawler_max_concurrent: int = Field(default=5)
-    llm_rate_limit_per_minute: int = Field(default=10)
+    llm_rate_limit_per_minute: int = Field(default=5)
+    llm_rpm_per_key: int = Field(default=5)       # Free tier Flash models typically allow 5-15 RPM
+    llm_tpm_per_key: int = Field(default=200000)  # Free tier Flash models typically allow 250k TPM
+    llm_rpd_per_key: int = Field(default=250)     # Free tier Flash models typically allow 250-1500 RPD
+    llm_max_wait_seconds: float = Field(default=180.0)
+    llm_batch_max_articles: int = Field(default=15)
+    llm_batch_max_chars: int = Field(default=45000)
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 settings = Settings()

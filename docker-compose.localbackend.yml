@@ -1,0 +1,44 @@
+# Chạy backend tại máy local (DB vẫn là MongoDB Atlas).
+# Tunnel: dùng container `cloudflare-tunnel` có sẵn (host network) -> http://localhost:${LOCAL_BACKEND_PORT:-18427}
+# Chạy:  docker compose -f docker-compose.localbackend.yml --env-file .env.localbackend up -d --build
+services:
+  # ── MongoDB local (không publish cổng ra host; chỉ backend truy cập qua mạng compose) ──
+  mongodb:
+    image: mongo:7.0
+    container_name: ltia-mongodb-local
+    restart: unless-stopped
+    volumes:
+      - ltia-mongo-local-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ltia-backend-local
+    restart: unless-stopped
+    env_file:
+      - .env.localbackend
+    environment:
+      PORT: "8000"
+      MONGODB_URI: mongodb://mongodb:27017   # ghi đè URI Atlas trong env_file
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${LOCAL_BACKEND_PORT:-18427}:8000"   # cổng host riêng, tránh trùng app khác; ra ngoài qua tunnel
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  ltia-mongo-local-data:

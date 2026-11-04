@@ -3,10 +3,9 @@ General Settings & PIN Authentication API
 """
 
 import logging
-from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
 from app.api.dependencies import get_general_settings_repo
@@ -24,11 +23,13 @@ class VerifyPinPayload(BaseModel):
 
 @router.get("/general")
 async def get_general_settings(
+    include_pins: bool = Query(False, description="Only true when fetched from verified admin UI"),
     repo: GeneralSettingsRepository = Depends(get_general_settings_repo),
 ):
-    """Fetch general application settings (e.g. if root page PIN is enabled)."""
-    settings = await repo.get_settings()
-    return settings
+    """Fetch general application settings. Never leak PIN codes on public calls."""
+    if include_pins:
+        return await repo.get_settings()
+    return await repo.get_public_settings()
 
 
 @router.post("/general")
@@ -48,6 +49,7 @@ async def verify_pin(
 ):
     """Verify access PIN for user or admin gates."""
     config = await repo.get_settings()
+
     # Verify Admin PIN
     if payload.type == "admin":
         expected_admin_pin = config.get("admin_pin_code", "LT2026")
@@ -56,7 +58,6 @@ async def verify_pin(
         return {"success": False, "message": "Mã PIN Admin không chính xác."}
 
     # Verify User (homepage) PIN
-    config = await repo.get_settings()
     if not config.get("pin_enabled", True):
         return {"success": True}
 

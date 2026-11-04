@@ -25,7 +25,7 @@ from datetime import datetime
 async def main():
     # Import after path setup
     from app.config import settings
-    from app.infrastructure.llm.gemini import SYSTEM_PROMPT, BATCH_SYSTEM_PROMPT
+    from app.infrastructure.llm.prompts import DEFAULT_PROMPT_NAME, SYSTEM_PROMPT, BATCH_SYSTEM_PROMPT
 
     client = AsyncIOMotorClient(settings.mongodb_uri)
     db = client[settings.mongodb_database]
@@ -43,7 +43,7 @@ async def main():
                     "system_prompt": SYSTEM_PROMPT,
                     "batch_system_prompt": BATCH_SYSTEM_PROMPT,
                     "updated_at": datetime.utcnow(),
-                    "name": "Prompt CRAFT v2 (Khuyên dùng)",
+                    "name": DEFAULT_PROMPT_NAME,
                 }
             },
         )
@@ -51,7 +51,7 @@ async def main():
     else:
         # Insert new
         doc = {
-            "name": "Prompt CRAFT v2 (Khuyên dùng)",
+            "name": DEFAULT_PROMPT_NAME,
             "system_prompt": SYSTEM_PROMPT,
             "batch_system_prompt": BATCH_SYSTEM_PROMPT,
             "is_active": True,

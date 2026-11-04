@@ -33,3 +33,5 @@ mongo-data/
 
 # Agent
 .agent/
+.env.railway
+.env.localbackend

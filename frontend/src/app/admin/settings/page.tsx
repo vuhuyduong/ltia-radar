@@ -25,7 +25,7 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     async function fetchGeneral() {
       try {
-        const res = await generalApi.getSettings();
+        const res = await generalApi.getSettings(true);
         if (res) {
           setPinEnabled(res.pin_enabled !== false);
           setPinCode((res.pin_code as string) || "2026");

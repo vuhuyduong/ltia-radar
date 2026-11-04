@@ -36,7 +36,7 @@ class GroqImplementation(ILLMService):
             self._cached_keys = []
             self._cached_model = "llama-3.3-70b-versatile"
 
-        from app.infrastructure.llm.gemini import SYSTEM_PROMPT, BATCH_SYSTEM_PROMPT
+        from app.infrastructure.llm.prompts import SYSTEM_PROMPT, BATCH_SYSTEM_PROMPT
         prompt_doc = await self.llm_prompt_repo.find_active()
         if prompt_doc:
             self._cached_sys_prompt = prompt_doc.get("system_prompt", SYSTEM_PROMPT)
@@ -85,7 +85,9 @@ class GroqImplementation(ILLMService):
             {
                 "index": idx,
                 "title": a.get("title", ""),
-                "content": a.get("raw_text", "")[:4000],
+                "content": (a.get("raw_text") or "")[:2500],
+                "source": a.get("domain", ""),
+                "published": a.get("publish_time", ""),
             }
             for idx, a in enumerate(articles)
         ]
@@ -129,13 +131,19 @@ class GroqImplementation(ILLMService):
                         covered_indices = set()
 
                         for cluster in parsed:
+                            if not isinstance(cluster, dict):
+                                continue
                             indices = cluster.get("source_indices", [])
                             if not indices:
                                 idx = cluster.get("index")
                                 if idx is not None:
                                     indices = [idx]
 
-                            valid_indices = [i for i in indices if isinstance(i, int) and 0 <= i < len(articles)]
+                            valid_indices = [
+                                i
+                                for i in indices
+                                if isinstance(i, int) and 0 <= i < len(articles) and i not in covered_indices
+                            ]
                             if not valid_indices:
                                 continue
 
@@ -229,19 +237,9 @@ class GroqImplementation(ILLMService):
 
     @staticmethod
     def _validate_response(data: dict) -> dict:
-        valid_sentiments = {"POSITIVE", "NEGATIVE", "NEUTRAL"}
-        valid_impacts = {"CRITICAL", "HIGH", "MEDIUM", "LOW"}
-        return {
-            "source_indices": data.get("source_indices", []),
-            "category": data.get("category", []),
-            "sentiment": data.get("sentiment", "NEUTRAL") if data.get("sentiment") in valid_sentiments else "NEUTRAL",
-            "target_scope": data.get("target_scope", []),
-            "impact_level": data.get("impact_level", "LOW") if data.get("impact_level") in valid_impacts else "LOW",
-            "key_entities": data.get("key_entities", []),
-            "executive_summary": data.get("executive_summary", ""),
-            "is_rumor": bool(data.get("is_rumor", False)),
-            "is_relevant": bool(data.get("is_relevant", True)),
-        }
+        from app.infrastructure.llm.prompts import validate_llm_item
+
+        return validate_llm_item(data)
 
     @staticmethod
     def _default_response(title: str = "") -> dict:

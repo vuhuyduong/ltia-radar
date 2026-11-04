@@ -4,12 +4,27 @@ LLM Configs API — CRUD endpoints for managing LLM configurations and API keys.
 
 from fastapi import APIRouter, Depends, HTTPException
 from google import genai
+from google.genai import types
 
 from app.api.dependencies import get_llm_config_repo
 from app.domain.entities.llm_config import LLMConfigCreate, LLMConfigUpdate
 from app.infrastructure.database.repositories import LLMConfigRepository
+from app.infrastructure.llm.quota import get_pool
 
 router = APIRouter(prefix="/api/llm-configs", tags=["LLM Configs"])
+
+
+def _mask_config_doc(doc: dict) -> dict:
+    """Mask raw API key before returning over HTTP while keeping suffix for UI display."""
+    masked = dict(doc)
+    raw_key = masked.get("api_key") or ""
+    if len(raw_key) > 10:
+        masked["api_key_masked"] = f"{raw_key[:6]}...{raw_key[-6:]}"
+    elif raw_key:
+        masked["api_key_masked"] = "***"
+    else:
+        masked["api_key_masked"] = ""
+    return masked
 
 
 @router.get("")
@@ -18,10 +33,28 @@ async def list_llm_configs(
     limit: int = 100,
     repo: LLMConfigRepository = Depends(get_llm_config_repo),
 ):
-    """List all configured LLM models and keys."""
+    """List all configured LLM models and keys, plus live Free Tier quota snapshot."""
     configs = await repo.find_all(skip=skip, limit=limit)
     total = await repo.count()
-    return {"data": configs, "total": total}
+    return {
+        "data": [_mask_config_doc(c) for c in configs],
+        "total": total,
+        "quota": get_pool().snapshot(),
+    }
+
+
+@router.get("/quota")
+async def get_llm_quota_status():
+    """Return live Free Tier rate-limit usage (RPM/TPM/RPD) per active key."""
+    pool = get_pool()
+    return {
+        "limits": {
+            "rpm_per_key": pool.rpm,
+            "tpm_per_key": pool.tpm,
+            "rpd_per_key": pool.rpd,
+        },
+        "keys": pool.snapshot(),
+    }
 
 
 @router.post("", status_code=201)
@@ -30,9 +63,8 @@ async def create_llm_config(
     repo: LLMConfigRepository = Depends(get_llm_config_repo),
 ):
     """Add a new LLM configuration / API key."""
-    # If is_default is true, ensure we don't have multiple defaults
     result = await repo.create(payload.model_dump())
-    return {"data": result, "message": "LLM configuration created successfully"}
+    return {"data": _mask_config_doc(result), "message": "LLM configuration created successfully"}
 
 
 @router.put("/{config_id}")
@@ -48,7 +80,7 @@ async def update_llm_config(
 
     update_data = payload.model_dump(exclude_unset=True)
     result = await repo.update(config_id, update_data)
-    return {"data": result, "message": "LLM configuration updated successfully"}
+    return {"data": _mask_config_doc(result), "message": "LLM configuration updated successfully"}
 
 
 @router.delete("/{config_id}")
@@ -70,29 +102,31 @@ async def test_llm_config(
     config_id: str,
     repo: LLMConfigRepository = Depends(get_llm_config_repo),
 ):
-    """Test connection using the selected API key and model."""
+    """Test connection using the selected API key and model (async, non-blocking)."""
     config = await repo.find_by_id(config_id)
     if not config:
         raise HTTPException(status_code=404, detail="Configuration not found")
 
     api_key = config.get("api_key")
-    model_name = config.get("model_name")
+    model_name = config.get("model_name") or "gemini-3.8-flash"
 
     if not api_key:
         raise HTTPException(status_code=400, detail="API key is empty")
 
     try:
-        # Test request using the model
         client = genai.Client(api_key=api_key)
-        # Simple generation call to test access
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model=model_name,
-            contents="Hello, respond with 'Success' in one word.",
+            contents="Reply with 'Success' in one word.",
+            config=types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel.HIGH),
+                max_output_tokens=256,
+            ),
         )
         response_text = response.text.strip() if response.text else ""
         return {
             "status": "success",
-            "message": "Connection test passed successfully",
+            "message": f"Connection test passed ({model_name}, effort=HIGH)",
             "response": response_text,
         }
     except Exception as e:

@@ -508,8 +508,8 @@ class LLMConfigRepository:
         # First find a config marked as default
         default_doc = await self.collection.find_one({"is_active": True, "is_default": True})
         if not default_doc:
-            # If none, return any active keys for the default model (e.g. gemini-3.5-flash)
-            cursor = self.collection.find({"is_active": True, "model_name": "gemini-3.5-flash"})
+            # If none, return any active keys for the default model (e.g. gemini-3.8-flash)
+            cursor = self.collection.find({"is_active": True, "model_name": "gemini-3.8-flash"})
             results = [_serialize_doc(doc) async for doc in cursor]
             if not results:
                 # Fallback to any active model configuration
@@ -612,16 +612,28 @@ class GeneralSettingsRepository:
     async def get_settings(self) -> dict:
         """Get settings, returns default settings if none found."""
         doc = await self.collection.find_one({"_id": "general_settings"})
+        default_settings = {
+            "_id": "general_settings",
+            "pin_enabled": True,
+            "pin_code": "2026",
+            "admin_pin_code": "LT2026",
+            "updated_at": datetime.utcnow()
+        }
         if not doc:
-            default_settings = {
-                "_id": "general_settings",
-                "pin_enabled": True,
-                "pin_code": "2026",
-                "updated_at": datetime.utcnow()
-            }
             await self.collection.insert_one(default_settings)
-            return default_settings
-        return _serialize_doc(doc)
+            doc = default_settings
+        else:
+            doc = _serialize_doc(doc)
+        return doc
+
+    async def get_public_settings(self) -> dict:
+        """Return general settings stripped of secret PIN codes for public endpoints."""
+        doc = await self.get_settings()
+        return {
+            "_id": doc.get("_id", "general_settings"),
+            "pin_enabled": doc.get("pin_enabled", True),
+            "updated_at": doc.get("updated_at"),
+        }
 
     async def update_settings(self, data: dict) -> dict:
         """Update settings."""

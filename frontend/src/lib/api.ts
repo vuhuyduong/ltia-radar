@@ -169,6 +169,10 @@ export const healthApi = {
 // ── LLM Prompts ──
 export const llmPromptsApi = {
   list: () => request<ApiResponse>("/api/llm-prompts"),
+  defaults: () =>
+    request<{ name: string; system_prompt: string; batch_system_prompt: string }>(
+      "/api/llm-prompts/defaults"
+    ),
   create: (data: {
     name: string;
     system_prompt: string;
@@ -192,7 +196,10 @@ export const llmPromptsApi = {
 
 // ── General Settings & Auth ──
 export const generalApi = {
-  getSettings: () => request<Record<string, unknown>>("/api/settings/general"),
+  getSettings: (includePins = false) =>
+    request<Record<string, unknown>>(
+      `/api/settings/general${includePins ? "?include_pins=true" : ""}`
+    ),
   updateSettings: (data: Record<string, unknown>) =>
     request<Record<string, unknown>>("/api/settings/general", {
       method: "POST",

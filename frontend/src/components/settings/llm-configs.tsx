@@ -45,7 +45,8 @@ interface LLMPrompt {
 }
 
 const POPULAR_MODELS = [
-  { provider: "Google Gemini", model: "gemini-3.5-flash", label: "Gemini 3.5 Flash (Mặc định)" },
+  { provider: "Google Gemini", model: "gemini-3.8-flash", label: "Gemini 3.8 Flash (Effort High — Mặc định)" },
+  { provider: "Google Gemini", model: "gemini-3.5-flash", label: "Gemini 3.5 Flash" },
   { provider: "Google Gemini", model: "gemini-3-flash-preview", label: "Gemini 3 Flash" },
   { provider: "Google Gemini", model: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
   { provider: "Google Gemini", model: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
@@ -142,7 +143,7 @@ export default function LLMConfigsPage() {
 
   // Form states (LLM configs)
   const [provider, setProvider] = useState("Google Gemini");
-  const [modelName, setModelName] = useState("gemini-3.5-flash");
+  const [modelName, setModelName] = useState("gemini-3.8-flash");
   const [apiKey, setApiKey] = useState("");
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -291,10 +292,17 @@ export default function LLMConfigsPage() {
   };
 
   // ── Prompt CRUD Handlers ──
-  const handleLoadSamplePrompt = () => {
-    setPromptName("Prompt phân tích rủi ro LTIA nâng cao");
-    setSystemPrompt(DEFAULT_SYSTEM_PROMPT);
-    setBatchSystemPrompt(DEFAULT_BATCH_SYSTEM_PROMPT);
+  const handleLoadSamplePrompt = async () => {
+    try {
+      const defaults = await llmPromptsApi.defaults();
+      setPromptName(defaults.name || "Prompt LTIA Radar v2.0 (BC 424/BC-BXD - 11/2026)");
+      setSystemPrompt(defaults.system_prompt || DEFAULT_SYSTEM_PROMPT);
+      setBatchSystemPrompt(defaults.batch_system_prompt || DEFAULT_BATCH_SYSTEM_PROMPT);
+    } catch {
+      setPromptName("Prompt phân tích rủi ro LTIA nâng cao");
+      setSystemPrompt(DEFAULT_SYSTEM_PROMPT);
+      setBatchSystemPrompt(DEFAULT_BATCH_SYSTEM_PROMPT);
+    }
   };
 
   const handleOpenNewPromptForm = () => {

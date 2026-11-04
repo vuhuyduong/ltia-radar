@@ -235,17 +235,20 @@ class CrawlNewsUseCase:
                 f"(out of {len(new_articles)})"
             )
 
-            # Step 5: Process with LLM in batches
+            # Step 5: Process with LLM in batches (sized for Google AI Studio Free Tier)
             active_rules = await self.alert_rule_repo.find_active()
 
-            # Dynamic batching: ≤10 articles or ≤40,000 chars total per batch
+            max_batch_articles = settings.llm_batch_max_articles
+            max_batch_chars = settings.llm_batch_max_chars
             batches: list[list[RawData]] = []
             current_batch: list[RawData] = []
             current_chars = 0
 
             for article in representative_articles:
-                content_len = len(article.raw_text or "")
-                if len(current_batch) >= 80 or (current_chars + content_len > 320000 and current_batch):
+                content_len = min(len(article.raw_text or ""), 3500)
+                if len(current_batch) >= max_batch_articles or (
+                    current_chars + content_len > max_batch_chars and current_batch
+                ):
                     batches.append(current_batch)
                     current_batch = []
                     current_chars = 0
@@ -254,25 +257,35 @@ class CrawlNewsUseCase:
             if current_batch:
                 batches.append(current_batch)
 
+            from app.infrastructure.llm.quota import QuotaExhausted
+
             for batch in batches:
-                total_chars = sum(len(a.raw_text or "") for a in batch)
-                logger.info(f"🧠 Processing batch of {len(batch)} articles ({total_chars} chars)")
+                total_chars = sum(min(len(a.raw_text or ""), 3500) for a in batch)
+                logger.info(f"🧠 Processing batch of {len(batch)} articles (~{total_chars} chars)")
 
                 batch_data = [
-                    {"id": str(a.id), "title": a.title, "raw_text": a.raw_text}
+                    {
+                        "id": str(a.id),
+                        "title": a.title,
+                        "raw_text": a.raw_text,
+                        "domain": get_friendly_domain(a.source_url),
+                        "publish_time": a.publish_time.isoformat() if a.publish_time else "",
+                    }
                     for a in batch
                 ]
 
                 try:
                     clusters = await self.llm_service.extract_insights_batch(batch_data)
-                    logger.info(f"✅ Batch of {len(batch)} processed successfully")
+                    logger.info(f"✅ Batch of {len(batch)} processed into {len(clusters)} clusters")
 
                     for cluster in clusters:
                         indices = cluster.pop("source_indices", [])
                         if not indices:
                             continue
-                            
+
                         primary_idx = indices[0]
+                        if primary_idx >= len(batch):
+                            continue
                         primary_article = batch[primary_idx]
                         grouped_articles = [batch[i] for i in indices[1:] if i < len(batch)]
 
@@ -288,38 +301,16 @@ class CrawlNewsUseCase:
                             logger.error(f"Error storing/alerting: {store_err}")
                             stats["errors"] += 1
 
-                except RuntimeError:
-                    # Total failure across all keys — fall back to one-by-one
-                    logger.warning("⚠️ Batch failed for all keys. Falling back to one-by-one...")
-                    # extract_insights_batch now returns clustered insights
-                    await self._rate_limiter.acquire()
-                    clusters = await self.llm_service.extract_insights_batch(batch_data)
-
-                    for cluster in clusters:
-                        indices = cluster.pop("source_indices", [])
-                        if not indices:
-                            continue
-                            
-                        # First index is primary
-                        primary_idx = indices[0]
-                        primary_article = batch[primary_idx]
-                        
-                        # Remaining indices are grouped articles
-                        grouped_articles = [batch[i] for i in indices[1:] if i < len(batch)]
-
-                        try:
-                            await self._store_and_alert(
-                                primary_article,
-                                cluster,
-                                active_rules,
-                                stats,
-                                grouped_articles=grouped_articles,
-                            )
-                        except Exception as e:
-                            logger.error(
-                                f"Failed to store cluster for {primary_article.source_url}: {e}"
-                            )
-                            stats["errors"] += 1
+                except QuotaExhausted as qe:
+                    logger.warning(f"⏸️ Quota exhausted during crawl cycle: {qe}. Stopping remaining batches.")
+                    stats["errors"] += 1
+                    break
+                except Exception as batch_err:
+                    logger.warning(
+                        f"⚠️ Batch of {len(batch)} failed ({batch_err}). "
+                        "Skipping batch to avoid wasting Free Tier quota."
+                    )
+                    stats["errors"] += 1
 
         except Exception as e:
             logger.error(f"❌ Crawl cycle failed: {e}")

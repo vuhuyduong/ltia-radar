@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.api.dependencies import get_llm_prompt_repo
 from app.domain.entities.llm_prompt import LLMPromptCreate, LLMPromptUpdate
 from app.infrastructure.database.repositories import LLMPromptRepository
+from app.infrastructure.llm.prompts import DEFAULT_PROMPT_NAME, SYSTEM_PROMPT, BATCH_SYSTEM_PROMPT
 
 router = APIRouter(prefix="/api/llm-prompts", tags=["LLM Prompts"])
 
@@ -21,6 +22,16 @@ async def list_llm_prompts(
     prompts = await repo.find_all(skip=skip, limit=limit)
     total = await repo.count()
     return {"data": prompts, "total": total}
+
+
+@router.get("/defaults")
+async def get_default_llm_prompts():
+    """Return canonical default single and batch system prompts from prompts.py."""
+    return {
+        "name": DEFAULT_PROMPT_NAME,
+        "system_prompt": SYSTEM_PROMPT,
+        "batch_system_prompt": BATCH_SYSTEM_PROMPT,
+    }
 
 
 @router.post("", status_code=201)

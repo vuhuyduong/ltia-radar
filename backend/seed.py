@@ -64,7 +64,27 @@ DEFAULT_KEYWORDS = [
     "vận hành thương mại Long Thành",
     "đón chuyến bay đầu tiên Long Thành",
     "chuyến bay đầu tiên sân bay Long Thành",
-    "ngày khai thác sân bay Long Thành"
+    "ngày khai thác sân bay Long Thành",
+
+    # ── Bổ sung Tháng 11/2026 (BC 424/BC-BXD: Đường găng, ORAT & Bộ máy LTIA) ──
+    "Cảng HKQT Long Thành",
+    "Cảng hàng không quốc tế Long Thành",
+    "Ban QLDA Long Thành",
+    "gói thầu 4.7",
+    "gói thầu 4.8",
+    "gói thầu 4.12",
+    "gói thầu 5.11",
+    "gói thầu 6.12",
+    "gói thầu 7.8",
+    "gói thầu 11.5",
+    "gói thầu XD02",
+    "HANTA2",
+    "ORAT Long Thành",
+    "APOC Long Thành",
+    "nhà ga hàng hóa Long Thành",
+    "cao tốc TP.HCM - Long Thành",
+    "Thủ Thiêm - Long Thành",
+    "Tân Sơn Nhất - Long Thành",
 ]
 
 # Default sources list (expanded to cover all categories for each source)
@@ -734,19 +754,19 @@ DEFAULT_ALERT_RULES = [
 DEFAULT_LLM_CONFIGS = [
     {
         "provider": "Google Gemini",
-        "model_name": "gemini-3.5-flash",
+        "model_name": "gemini-3.8-flash",
         "api_key": "",  # Set via UI or GEMINI_API_KEY env var after deploy
         "is_active": True,
         "is_default": True,
-        "description": "Google Gemini 3.5 Flash"
+        "description": "Google Gemini 3.8 Flash (Effort High)"
     },
     {
         "provider": "Google Gemini",
-        "model_name": "gemini-3-flash-preview",
+        "model_name": "gemini-3.5-flash",
         "api_key": "",  # Set via UI or GEMINI_API_KEY env var after deploy
         "is_active": False,
         "is_default": False,
-        "description": "Google Gemini 3.0 Flash (Preview)"
+        "description": "Google Gemini 3.5 Flash"
     },
     {
         "provider": "groq",
@@ -853,26 +873,26 @@ async def main():
             )
             print(f"ℹ️ LLM Config updated (is_default={conf['is_default']}): {conf['model_name']}")
 
-    # 5. Seed / Sync LLM Prompts (always upsert to keep in sync with gemini.py)
+    # 5. Seed / Sync LLM Prompts (always upsert to keep in sync with prompts.py)
     llm_prompts_col = db.llm_prompts
-    from app.infrastructure.llm.gemini import SYSTEM_PROMPT, BATCH_SYSTEM_PROMPT
+    from app.infrastructure.llm.prompts import DEFAULT_PROMPT_NAME, SYSTEM_PROMPT, BATCH_SYSTEM_PROMPT
     existing_prompt = await llm_prompts_col.find_one({"is_active": True})
     if existing_prompt:
         await llm_prompts_col.update_one(
             {"_id": existing_prompt["_id"]},
             {
                 "$set": {
-                    "name": "Prompt CRAFT v2 (Khuyên dùng)",
+                    "name": DEFAULT_PROMPT_NAME,
                     "system_prompt": SYSTEM_PROMPT,
                     "batch_system_prompt": BATCH_SYSTEM_PROMPT,
                     "updated_at": datetime.utcnow(),
                 }
             },
         )
-        print("✅ LLM Prompt synced (upsert) with latest from gemini.py")
+        print("✅ LLM Prompt synced (upsert) with latest from prompts.py")
     else:
         default_prompt_doc = {
-            "name": "Prompt CRAFT v2 (Khuyên dùng)",
+            "name": DEFAULT_PROMPT_NAME,
             "system_prompt": SYSTEM_PROMPT,
             "batch_system_prompt": BATCH_SYSTEM_PROMPT,
             "is_active": True,
