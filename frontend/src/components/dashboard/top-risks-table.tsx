@@ -59,7 +59,19 @@ export function TopRisksTable({ data }: TopRisksTableProps) {
               data.map((item, idx) => (
                 <tr key={(item._id as string) || idx}>
                   <td className="min-w-[180px] max-w-[300px] px-5 py-3 font-medium text-[hsl(var(--foreground))] whitespace-normal break-words">
-                     {(item.title as string) || "N/A"}
+                    <div>{(item.title as string) || "N/A"}</div>
+                    {Array.isArray(item.target_scope) && item.target_scope.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {(item.target_scope as string[]).slice(0, 3).map((scope) => (
+                          <span
+                            key={scope}
+                            className="inline-block rounded px-1.5 py-0.5 text-[9px] font-medium bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20"
+                          >
+                            {scope}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td className="px-5 py-3 text-[hsl(var(--muted-foreground))] whitespace-nowrap">
                     {(() => {

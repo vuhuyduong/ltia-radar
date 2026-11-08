@@ -43,13 +43,18 @@ export const getFriendlyDomain = (url: string | undefined): string => {
   }
 };
 
+import { ensureUtcString } from "./date";
+
 export const getEarliestPublishDate = (item: any): Date | string | null => {
   // If there are citations, find the earliest publish_time
-  if (item.citations && Array.isArray(item.citations) && item.citations.length > 0) {
+  if (item?.citations && Array.isArray(item.citations) && item.citations.length > 0) {
     let earliest: Date | null = null;
     for (const citation of item.citations) {
       if (citation.publish_time) {
-        const d = new Date(citation.publish_time);
+        const timeStr = typeof citation.publish_time === "string" 
+          ? ensureUtcString(citation.publish_time) 
+          : citation.publish_time;
+        const d = new Date(timeStr);
         if (!isNaN(d.getTime())) {
           if (!earliest || d < earliest) {
             earliest = d;
@@ -60,5 +65,6 @@ export const getEarliestPublishDate = (item: any): Date | string | null => {
     if (earliest) return earliest;
   }
   // Fallback to publish_time, or processed_time
-  return item.publish_time || item.processed_time || null;
+  const fallback = item?.publish_time || item?.processed_time || null;
+  return fallback;
 };

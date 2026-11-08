@@ -17,6 +17,7 @@ interface Article {
   sentiment: string;
   impact_level: string;
   category: string[];
+  target_scope?: string[];
   executive_summary: string;
   is_rumor: boolean;
   processed_time: string;
@@ -45,6 +46,7 @@ const sentimentLabel: Record<string, string> = {
 };
 
 import { getFriendlyDomain, getEarliestPublishDate } from "@/lib/utils";
+import { BXD_PACKAGE_GROUPS, isBxdCriticalScope } from "@/lib/packages";
 
 
 export default function ArticlesPage() {
@@ -217,16 +219,18 @@ export default function ArticlesPage() {
         <select
           value={targetScope}
           onChange={(e) => setTargetScope(e.target.value)}
-          className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm text-[hsl(var(--foreground))] focus:border-cyan-500 focus:outline-none"
+          className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm text-[hsl(var(--foreground))] focus:border-cyan-500 focus:outline-none max-w-[220px]"
         >
-          <option value="">Tất cả gói thầu</option>
-          <option value="Toàn dự án">Toàn dự án</option>
-          <option value="Gói thầu 5.10">Gói thầu 5.10</option>
-          <option value="Gói thầu 4.6">Gói thầu 4.6</option>
-          <option value="San nền">San nền</option>
-          <option value="Giao thông">Giao thông</option>
-          <option value="Nhà ga">Nhà ga</option>
-          <option value="Đường cất hạ cánh">Đường cất hạ cánh</option>
+          <option value="">Tất cả gói thầu & phạm vi</option>
+          {BXD_PACKAGE_GROUPS.map((group) => (
+            <optgroup key={group.groupName} label={group.groupName}>
+              {group.options.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </optgroup>
+          ))}
         </select>
       </div>
 
@@ -251,7 +255,7 @@ export default function ArticlesPage() {
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <span
                       className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
                         impactBadge[article.impact_level] || ""
@@ -280,6 +284,22 @@ export default function ArticlesPage() {
                         {cat}
                       </span>
                     ))}
+                    {article.target_scope?.map((scope) => {
+                      const isCrit = isBxdCriticalScope(scope);
+                      return (
+                        <span
+                          key={scope}
+                          className={`rounded-md px-2 py-0.5 text-[10px] transition-all ${
+                            isCrit
+                              ? "bg-rose-500/15 text-rose-500 dark:text-rose-400 border border-rose-500/30 font-bold"
+                              : "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 font-medium"
+                          }`}
+                          title={isCrit ? "Gói thầu đường găng quan trọng theo Báo cáo BXD" : `Phạm vi: ${scope}`}
+                        >
+                          {scope}
+                        </span>
+                      );
+                    })}
                   </div>
 
                   <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] transition-colors">

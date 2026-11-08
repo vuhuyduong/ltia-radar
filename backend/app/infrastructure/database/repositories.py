@@ -10,9 +10,10 @@ Fixes applied (audit 2026-06-20):
   - Flaw 12: Inline domain-name mapping removed; imports get_friendly_domain instead.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 from typing import Optional
+import zoneinfo
 
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -20,11 +21,32 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.domain.utils.domain_mapper import get_friendly_domain
 from app.infrastructure.database.mongodb import MongoDB
 
+VN_TZ = zoneinfo.ZoneInfo("Asia/Ho_Chi_Minh")
+
+
+def _serialize_val(val):
+    """Recursively convert BSON/datetime types to JSON serializable objects in VN timezone."""
+    if isinstance(val, datetime):
+        if val.tzinfo is None:
+            # Datetimes stored in MongoDB are UTC by convention
+            val = val.replace(tzinfo=timezone.utc)
+        return val.astimezone(VN_TZ).isoformat()
+    elif isinstance(val, dict):
+        return {k: _serialize_val(v) for k, v in val.items()}
+    elif isinstance(val, list):
+        return [_serialize_val(v) for v in val]
+    return val
+
 
 def _serialize_doc(doc: dict) -> dict:
-    """Convert MongoDB document _id (ObjectId) to string."""
-    if doc and "_id" in doc:
+    """Convert MongoDB document _id (ObjectId) to string and serialize all datetimes to VN ISO."""
+    if not doc:
+        return doc
+    if "_id" in doc:
         doc["_id"] = str(doc["_id"])
+    for k, v in list(doc.items()):
+        if k != "_id":
+            doc[k] = _serialize_val(v)
     return doc
 
 

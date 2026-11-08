@@ -748,114 +748,201 @@ export default function SettingsPage() {
             )}
 
             {activeTab === "history" && (
-              <div className="space-y-3">
-                <div className="overflow-x-auto rounded-xl border border-[hsl(var(--border))]">
-                  <table className="min-w-full divide-y divide-[hsl(var(--border))] text-left text-xs">
-                    <thead className="bg-[hsl(var(--secondary))]/35 font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+              <div className="space-y-4">
+                {/* Desktop View: Bảng 4 cụm thông tin tinh gọn, không cuộn ngang */}
+                <div className="hidden md:block rounded-xl border border-[hsl(var(--border))] overflow-hidden bg-[hsl(var(--card))]">
+                  <table className="w-full text-left text-xs divide-y divide-[hsl(var(--border))]">
+                    <thead className="bg-[hsl(var(--secondary))]/40 font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                       <tr>
-                        <th className="px-3 py-3">Thời gian (GMT+7)</th>
-                        <th className="px-3 py-3">Trạng thái</th>
-                        <th className="px-3 py-3">Mô hình AI & Key</th>
-                        <th className="px-3 py-3">Tokens / Free TPM</th>
-                        <th className="px-3 py-3 text-center">Lỗi API (429/503)</th>
-                        <th className="px-3 py-3 text-center">Thô / Mới / Cụm</th>
-                        <th className="px-3 py-3 text-center">Cảnh báo</th>
-                        <th className="px-3 py-3 text-right">Thời lượng</th>
-                        <th className="px-3 py-3 text-center">Chi tiết</th>
+                        <th className="px-4 py-3 w-[26%]">Thời gian & Trạng thái</th>
+                        <th className="px-4 py-3 w-[34%]">Mô hình AI & Quota LLM</th>
+                        <th className="px-4 py-3 w-[28%]">Xử lý Tin & Cảnh báo</th>
+                        <th className="px-4 py-3 w-[12%] text-right">Chi tiết</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[hsl(var(--border))]/60">
                       {logs.recent_runs.length > 0 ? (
                         logs.recent_runs.map((run) => (
                           <tr key={run._id} className="hover:bg-[hsl(var(--secondary))]/20 transition-colors">
-                            <td className="px-3 py-3 font-medium whitespace-nowrap text-[hsl(var(--foreground))]">
-                              {formatVietnamDateTime(run.timestamp)}
-                            </td>
-                            <td className="px-3 py-3 whitespace-nowrap">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                run.status === "success"
-                                  ? "bg-emerald-500/10 text-emerald-500"
-                                  : run.status === "failed"
-                                  ? "bg-rose-500/10 text-rose-500"
-                                  : "bg-amber-500/10 text-amber-500"
-                              }`}>
-                                {run.status === "success" ? "Thành công" : run.status === "failed" ? "Thất bại" : "Lỗi một phần"}
-                              </span>
-                            </td>
-                            <td className="px-3 py-3 whitespace-nowrap">
-                              <div className="flex items-center gap-1.5">
-                                <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
-                                  {run.llm_model || "gemini-3.8-flash"}
+                            {/* Cột 1: Thời gian & Trạng thái */}
+                            <td className="px-4 py-3 align-top">
+                              <div className="font-medium text-[hsl(var(--foreground))] text-xs">
+                                {formatVietnamDateTime(run.timestamp)}
+                              </div>
+                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  run.status === "success"
+                                    ? "bg-emerald-500/10 text-emerald-500"
+                                    : run.status === "failed"
+                                    ? "bg-rose-500/10 text-rose-500"
+                                    : "bg-amber-500/10 text-amber-500"
+                                }`}>
+                                  {run.status === "success" ? "Thành công" : run.status === "failed" ? "Thất bại" : "Lỗi một phần"}
                                 </span>
-                                <span className="px-1.5 py-0.5 rounded font-mono text-[10px] bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))] border border-[hsl(var(--border))]">
-                                  {run.llm_key_suffix || "N/A"}
+                                <span className="text-[10px] text-[hsl(var(--muted-foreground))] font-mono">
+                                  ⏱ {run.elapsed_seconds.toFixed(1)}s
                                 </span>
                               </div>
                             </td>
-                            <td className="px-3 py-3 whitespace-nowrap">
-                              {run.new_articles === 0 ? (
-                                <span className="text-[10px] text-[hsl(var(--muted-foreground))] font-mono">0 tok (Nghỉ)</span>
-                              ) : (
-                                <div className="flex flex-col">
-                                  <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400">
-                                    {(run.llm_tokens_used || 0).toLocaleString()} tok
-                                  </span>
-                                  <span className="text-[9px] text-[hsl(var(--muted-foreground))] font-mono">
-                                    / {(run.llm_free_tpm_limit ? (run.llm_free_tpm_limit / 1000).toFixed(0) : 200)}k TPM
-                                  </span>
-                                </div>
-                              )}
+
+                            {/* Cột 2: Mô hình AI & Quota LLM */}
+                            <td className="px-4 py-3 align-top">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                                  {run.llm_model || "gemini-2.0-flash"}
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded font-mono text-[10px] bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))] border border-[hsl(var(--border))]">
+                                  Key: {run.llm_key_suffix || "N/A"}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1.5 text-[11px] flex-wrap">
+                                <span className="font-mono font-semibold text-cyan-600 dark:text-cyan-400">
+                                  {(run.llm_tokens_used || 0).toLocaleString()} tok
+                                </span>
+                                <span className="text-[10px] text-[hsl(var(--muted-foreground))] font-mono">
+                                  / {(run.llm_free_tpm_limit ? (run.llm_free_tpm_limit / 1000).toFixed(0) : 200)}k TPM
+                                </span>
+                                {(run.llm_errors_429 || 0) + (run.llm_errors_503 || 0) === 0 ? (
+                                  <span className="text-[10px] text-emerald-500 font-medium ml-1">✓ 0 lỗi API</span>
+                                ) : (
+                                  <div className="flex items-center gap-1 ml-1 text-[10px] font-mono">
+                                    {run.llm_errors_429 ? (
+                                      <span className="px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-500 border border-amber-500/30 font-bold" title="Lỗi 429">
+                                        429:{run.llm_errors_429}
+                                      </span>
+                                    ) : null}
+                                    {run.llm_errors_503 ? (
+                                      <span className="px-1.5 py-0.2 rounded bg-rose-500/15 text-rose-500 border border-rose-500/30 font-bold" title="Lỗi 503">
+                                        503:{run.llm_errors_503}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                )}
+                              </div>
                             </td>
-                            <td className="px-3 py-3 text-center whitespace-nowrap">
-                              {(run.llm_errors_429 || 0) + (run.llm_errors_503 || 0) === 0 ? (
-                                <span className="text-[10px] text-emerald-500 font-semibold">0 lỗi</span>
-                              ) : (
-                                <div className="flex items-center justify-center gap-1 text-[10px] font-mono">
-                                  {run.llm_errors_429 ? (
-                                    <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold" title="Lỗi 429 (Rate limit)">
-                                      429:{run.llm_errors_429}
-                                    </span>
-                                  ) : null}
-                                  {run.llm_errors_503 ? (
-                                    <span className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-500 border border-rose-500/20 font-bold" title="Lỗi 503 (Overload)">
-                                      503:{run.llm_errors_503}
-                                    </span>
-                                  ) : null}
-                                </div>
-                              )}
+
+                            {/* Cột 3: Xử lý Tin & Cảnh báo */}
+                            <td className="px-4 py-3 align-top">
+                              <div className="flex items-center gap-1.5 text-xs flex-wrap font-mono">
+                                <span className="text-[hsl(var(--foreground))]">{run.crawled_count} thô</span>
+                                <span className="text-[hsl(var(--muted-foreground))]">→</span>
+                                <span className="font-bold text-amber-500">{run.new_articles} mới</span>
+                                <span className="text-[hsl(var(--muted-foreground))]">→</span>
+                                <span className="font-bold text-cyan-600 dark:text-cyan-400">{run.processed_count} cụm</span>
+                              </div>
+                              <div className="text-[10px] text-[hsl(var(--muted-foreground))] mt-1.5">
+                                🔔 {run.alerts_sent} cảnh báo gửi qua Telegram
+                              </div>
                             </td>
-                            <td className="px-3 py-3 text-center whitespace-nowrap text-xs">
-                              <span className="font-mono text-[hsl(var(--foreground))]">{run.crawled_count}</span>
-                              <span className="text-[hsl(var(--muted-foreground))] mx-1">/</span>
-                              <span className="font-mono font-semibold text-amber-500">{run.new_articles}</span>
-                              <span className="text-[hsl(var(--muted-foreground))] mx-1">/</span>
-                              <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400">{run.processed_count}</span>
-                            </td>
-                            <td className="px-3 py-3 text-center text-[hsl(var(--foreground))] font-mono">{run.alerts_sent}</td>
-                            <td className="px-3 py-3 text-right text-[hsl(var(--muted-foreground))] font-mono whitespace-nowrap">
-                              {run.elapsed_seconds.toFixed(1)}s
-                            </td>
-                            <td className="px-3 py-3 text-center">
+
+                            {/* Cột 4: Thao tác Chi tiết */}
+                            <td className="px-4 py-3 align-top text-right">
                               <button
                                 type="button"
                                 onClick={() => setSelectedRun(run)}
-                                className="p-1.5 rounded-lg border border-[hsl(var(--border))] hover:bg-cyan-500/10 hover:border-cyan-500/30 text-[hsl(var(--muted-foreground))] hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[hsl(var(--border))] hover:bg-cyan-500/10 hover:border-cyan-500/30 text-[hsl(var(--foreground))] hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors text-xs font-medium"
                                 title="Xem chi tiết hoạt động LLM"
                               >
-                                <Info className="h-3.5 w-3.5" />
+                                <Info className="h-3.5 w-3.5 text-cyan-500" />
+                                <span>Chi tiết</span>
                               </button>
                             </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={9} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">
+                          <td colSpan={4} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">
                             Chưa có lịch sử chạy crawl tin tức.
                           </td>
                         </tr>
                       )}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Mobile / Tablet View: Thẻ danh sách dọc (Card Stack), chống tràn màn hình */}
+                <div className="block md:hidden space-y-3">
+                  {logs.recent_runs.length > 0 ? (
+                    logs.recent_runs.map((run) => (
+                      <div
+                        key={run._id}
+                        className="glass-card rounded-xl border border-[hsl(var(--border))] p-4 space-y-3 bg-[hsl(var(--card))]"
+                      >
+                        {/* Header: Thời gian & Trạng thái */}
+                        <div className="flex items-start justify-between gap-2 border-b border-[hsl(var(--border))]/60 pb-2.5">
+                          <div>
+                            <div className="font-bold text-xs text-[hsl(var(--foreground))]">
+                              {formatVietnamDateTime(run.timestamp)}
+                            </div>
+                            <div className="text-[10px] text-[hsl(var(--muted-foreground))] font-mono mt-0.5">
+                              Thời lượng: {run.elapsed_seconds.toFixed(1)}s • 🔔 {run.alerts_sent} alerts
+                            </div>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            run.status === "success"
+                              ? "bg-emerald-500/10 text-emerald-500"
+                              : run.status === "failed"
+                              ? "bg-rose-500/10 text-rose-500"
+                              : "bg-amber-500/10 text-amber-500"
+                          }`}>
+                            {run.status === "success" ? "Thành công" : run.status === "failed" ? "Thất bại" : "Lỗi"}
+                          </span>
+                        </div>
+
+                        {/* LLM & Tokens */}
+                        <div className="space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                                {run.llm_model || "gemini-2.0-flash"}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded font-mono text-[10px] bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))] border border-[hsl(var(--border))]">
+                                {run.llm_key_suffix || "N/A"}
+                              </span>
+                            </div>
+                            <div className="font-mono text-[11px] font-semibold text-cyan-600 dark:text-cyan-400">
+                              {(run.llm_tokens_used || 0).toLocaleString()} tok
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-[hsl(var(--muted-foreground))]">
+                            <span>Lỗi 429/503:</span>
+                            {(run.llm_errors_429 || 0) + (run.llm_errors_503 || 0) === 0 ? (
+                              <span className="text-emerald-500 font-medium">0 lỗi</span>
+                            ) : (
+                              <span className="font-mono font-bold text-rose-500">
+                                {run.llm_errors_429 ? `429: ${run.llm_errors_429} ` : ""}
+                                {run.llm_errors_503 ? `503: ${run.llm_errors_503}` : ""}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Pipeline Tin tức */}
+                        <div className="p-2.5 rounded-lg bg-[hsl(var(--secondary))]/40 flex items-center justify-between text-xs font-mono">
+                          <span className="text-[hsl(var(--foreground))]">{run.crawled_count} thô</span>
+                          <span>→</span>
+                          <span className="text-amber-500 font-bold">{run.new_articles} mới</span>
+                          <span>→</span>
+                          <span className="text-cyan-600 dark:text-cyan-400 font-bold">{run.processed_count} cụm lưu</span>
+                        </div>
+
+                        {/* Action button */}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRun(run)}
+                          className="w-full py-2 rounded-lg border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <Info className="h-3.5 w-3.5" />
+                          Xem chi tiết thông số LLM & Quota
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="glass-card rounded-xl p-8 text-center text-xs text-[hsl(var(--muted-foreground))]">
+                      Chưa có lịch sử chạy crawl tin tức.
+                    </div>
+                  )}
                 </div>
 
                 {/* Modal Chi tiết hoạt động LLM */}
