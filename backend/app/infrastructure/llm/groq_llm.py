@@ -51,6 +51,37 @@ class GroqImplementation(ILLMService):
         self._cached_sys_prompt = None
         self._cached_batch_prompt = None
 
+    def start_run_tracking(self) -> None:
+        self._run_calls_count = 0
+        self._run_tokens_used = 0
+        self._run_models_used: list[str] = []
+        self._run_keys_used: list[str] = []
+        self._run_errors: list[str] = []
+
+    async def get_run_metrics(self) -> dict:
+        await self._ensure_config()
+        active_keys = self._cached_keys or []
+        active_key_suffixes = [f"...{k[-4:]}" for k in active_keys if len(k) >= 4]
+        used_key_suffixes = [f"...{k[-4:]}" for k in getattr(self, "_run_keys_used", []) if len(k) >= 4]
+        models_used = getattr(self, "_run_models_used", [])
+        calls = getattr(self, "_run_calls_count", 0)
+        tokens = getattr(self, "_run_tokens_used", 0)
+        errors = getattr(self, "_run_errors", [])
+
+        model_name = models_used[0] if models_used else (self._cached_model or "llama-3.3-70b-versatile")
+
+        return {
+            "provider": "Groq",
+            "model_name": model_name,
+            "all_models_used": list(dict.fromkeys(models_used)),
+            "key_suffixes": list(dict.fromkeys(used_key_suffixes or active_key_suffixes)),
+            "calls_count": calls,
+            "tokens_used": tokens,
+            "prompt_name": "Prompt LTIA Radar v2.0",
+            "status": "success" if calls > 0 else "idle",
+            "errors": errors,
+        }
+
     def _get_fallback_models(self) -> list[str]:
         base_models = [
             "llama-3.3-70b-versatile",

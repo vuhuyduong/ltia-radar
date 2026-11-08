@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { crawlerApi } from "@/lib/api";
+import { formatVietnamDateTime } from "@/lib/date";
 import {
   Clock,
   Save,
@@ -15,6 +16,11 @@ import {
   List,
   Database,
   RefreshCw,
+  Cpu,
+  Key,
+  Info,
+  X,
+  FileText,
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -40,6 +46,7 @@ export default function SettingsPage() {
 
   // System Logs State
   const [activeTab, setActiveTab] = useState<"news" | "schedule" | "history">("news");
+  const [selectedRun, setSelectedRun] = useState<any | null>(null);
   const [logs, setLogs] = useState<{
     news_stats: {
       total_crawled: number;
@@ -52,6 +59,36 @@ export default function SettingsPage() {
       frequency_description: string;
       last_run: string | null;
       next_run: string | null;
+      timezone?: string;
+      active_llm?: {
+        provider: string;
+        model_name: string;
+        key_suffix: string;
+        prompt_name: string;
+      };
+    };
+    live_quota?: Record<string, {
+      key_suffix: string;
+      masked_key: string;
+      model: string;
+      rpm_used: number;
+      rpm_limit: number;
+      tpm_used: number;
+      tpm_limit: number;
+      rpd_used: number;
+      rpd_limit: number;
+      total_tokens_today: number;
+      total_success: number;
+      errors_429: number;
+      errors_503: number;
+      errors_other: number;
+      cooldown_s: number;
+      status: string;
+    }>;
+    quota_limits?: {
+      rpm_limit: number;
+      tpm_limit: number;
+      rpd_limit: number;
     };
     recent_runs: {
       _id: string;
@@ -64,6 +101,19 @@ export default function SettingsPage() {
       errors: number;
       elapsed_seconds: number;
       trigger_type: string;
+      llm_provider?: string;
+      llm_model?: string;
+      llm_key_suffix?: string;
+      llm_calls_count?: number;
+      llm_tokens_used?: number;
+      llm_free_tpm_limit?: number;
+      llm_free_rpd_limit?: number;
+      llm_free_rpm_limit?: number;
+      llm_errors_429?: number;
+      llm_errors_503?: number;
+      llm_errors_other?: number;
+      llm_prompt_name?: string;
+      llm_status?: string;
     }[];
   } | null>(null);
 
@@ -575,87 +625,387 @@ export default function SettingsPage() {
                     <span className="text-[hsl(var(--muted-foreground))]">Tần suất thiết lập:</span>
                     <span className="font-semibold text-[hsl(var(--foreground))]">{logs.schedule_stats.frequency_description}</span>
                   </div>
+                  {logs.schedule_stats.active_llm && (
+                    <div className="flex justify-between items-center pt-2 border-t border-[hsl(var(--border))]/40">
+                      <span className="text-[hsl(var(--muted-foreground))]">Mô hình AI:</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded">
+                          {logs.schedule_stats.active_llm.model_name}
+                        </span>
+                        <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))] border border-[hsl(var(--border))]">
+                          Key: {logs.schedule_stats.active_llm.key_suffix}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-[hsl(var(--secondary))]/25 rounded-xl p-4 border border-[hsl(var(--border))]/50 space-y-3.5 text-xs">
                   <div className="flex justify-between items-center border-b border-[hsl(var(--border))]/50 pb-2">
                     <span className="text-[10px] text-[hsl(var(--muted-foreground))] uppercase font-bold">Thời gian vận hành</span>
-                    <span className="text-[10px] text-[hsl(var(--muted-foreground))]">GMT+7</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                      Giờ Việt Nam (UTC+7)
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[hsl(var(--muted-foreground))]">Lần quét gần nhất:</span>
                     <span className="font-semibold text-[hsl(var(--foreground))]">
-                      {logs.schedule_stats.last_run ? new Date(logs.schedule_stats.last_run).toLocaleString("vi-VN") : "Chưa có"}
+                      {logs.schedule_stats.last_run ? formatVietnamDateTime(logs.schedule_stats.last_run) : "Chưa có"}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[hsl(var(--muted-foreground))]">Lần quét dự kiến tiếp:</span>
                     <span className="font-semibold text-cyan-600 dark:text-cyan-400">
-                      {logs.schedule_stats.next_run ? new Date(logs.schedule_stats.next_run).toLocaleString("vi-VN") : "Không lập lịch"}
+                      {logs.schedule_stats.next_run ? formatVietnamDateTime(logs.schedule_stats.next_run) : "Không lập lịch"}
                     </span>
                   </div>
+                  {logs.schedule_stats.active_llm?.prompt_name && (
+                    <div className="flex justify-between items-center pt-2 border-t border-[hsl(var(--border))]/40">
+                      <span className="text-[hsl(var(--muted-foreground))]">Prompt kích hoạt:</span>
+                      <span className="text-[11px] font-medium text-[hsl(var(--foreground))] truncate max-w-[200px]" title={logs.schedule_stats.active_llm.prompt_name}>
+                        {logs.schedule_stats.active_llm.prompt_name}
+                      </span>
+                    </div>
+                  )}
                 </div>
+
+                {/* Live Free Tier Quota Monitor Card */}
+                {logs.live_quota && Object.keys(logs.live_quota).length > 0 && (
+                  <div className="col-span-1 sm:col-span-2 rounded-xl bg-[hsl(var(--secondary))]/20 border border-[hsl(var(--border))]/60 p-4 space-y-3">
+                    <div className="flex items-center justify-between border-b border-[hsl(var(--border))]/40 pb-2">
+                      <div className="flex items-center gap-2">
+                        <Cpu className="h-4 w-4 text-cyan-500" />
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-[hsl(var(--foreground))]">
+                          Tình trạng Google AI Studio Free Tier (Thời gian thực)
+                        </h4>
+                      </div>
+                      <span className="text-[10px] text-[hsl(var(--muted-foreground))]">
+                        Giới hạn Free: 20 RPD / 200k TPM / 5 RPM per key
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                      {Object.entries(logs.live_quota).map(([label, q]) => (
+                        <div key={label} className="p-3 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/60 space-y-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400">{q.model}</span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              q.status === "ready"
+                                ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                                : q.status === "cooling_down"
+                                ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                                : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                            }`}>
+                              {q.status === "ready" ? "Sẵn sàng" : q.status === "cooling_down" ? `Cooldown ${q.cooldown_s}s` : "Hết quota ngày"}
+                            </span>
+                          </div>
+
+                          <div className="text-[10px] text-[hsl(var(--muted-foreground))] font-mono">
+                            API Key: <span className="text-[hsl(var(--foreground))] font-semibold">{q.masked_key}</span> (Đuôi: {q.key_suffix})
+                          </div>
+
+                          {/* Progress: RPD (Daily requests) */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[10px]">
+                              <span className="text-[hsl(var(--muted-foreground))]">Requests ngày (RPD):</span>
+                              <span className="font-mono font-semibold">{q.rpd_used} / {q.rpd_limit}</span>
+                            </div>
+                            <div className="w-full bg-[hsl(var(--secondary))] h-1.5 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  q.rpd_used >= q.rpd_limit ? "bg-rose-500" : q.rpd_used >= q.rpd_limit * 0.75 ? "bg-amber-500" : "bg-cyan-500"
+                                }`}
+                                style={{ width: `${Math.min(100, (q.rpd_used / q.rpd_limit) * 100)}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Stats Grid: TPM, 429, 503 */}
+                          <div className="grid grid-cols-3 gap-1.5 pt-1 text-center text-[10px]">
+                            <div className="p-1 rounded bg-[hsl(var(--secondary))]/40">
+                              <span className="text-[hsl(var(--muted-foreground))] block">TPM đang dùng</span>
+                              <span className="font-mono font-bold">{q.tpm_used.toLocaleString()} / {(q.tpm_limit / 1000).toFixed(0)}k</span>
+                            </div>
+                            <div className="p-1 rounded bg-[hsl(var(--secondary))]/40">
+                              <span className="text-[hsl(var(--muted-foreground))] block">Lỗi 429</span>
+                              <span className={`font-mono font-bold ${q.errors_429 > 0 ? "text-amber-500" : "text-[hsl(var(--muted-foreground))]"}`}>
+                                {q.errors_429}
+                              </span>
+                            </div>
+                            <div className="p-1 rounded bg-[hsl(var(--secondary))]/40">
+                              <span className="text-[hsl(var(--muted-foreground))] block">Lỗi 503</span>
+                              <span className={`font-mono font-bold ${q.errors_503 > 0 ? "text-rose-500" : "text-[hsl(var(--muted-foreground))]"}`}>
+                                {q.errors_503}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {activeTab === "history" && (
-              <div className="overflow-x-auto rounded-xl border border-[hsl(var(--border))]">
-                <table className="min-w-full divide-y divide-[hsl(var(--border))] text-left text-xs">
-                  <thead className="bg-[hsl(var(--secondary))]/35 font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
-                    <tr>
-                      <th className="px-4 py-3">Thời gian</th>
-                      <th className="px-4 py-3">Trạng thái</th>
-                      <th className="px-4 py-3">Kiểu kích hoạt</th>
-                      <th className="px-4 py-3 text-center">Tin thô</th>
-                      <th className="px-4 py-3 text-center">Tin mới</th>
-                      <th className="px-4 py-3 text-center">Liên quan</th>
-                      <th className="px-4 py-3 text-center">Cảnh báo</th>
-                      <th className="px-4 py-3 text-right">Thời gian chạy</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[hsl(var(--border))]/60">
-                    {logs.recent_runs.length > 0 ? (
-                      logs.recent_runs.map((run) => (
-                        <tr key={run._id} className="hover:bg-[hsl(var(--secondary))]/10 transition-colors">
-                          <td className="px-4 py-3 font-medium whitespace-nowrap text-[hsl(var(--foreground))]">
-                            {new Date(run.timestamp).toLocaleString("vi-VN")}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              run.status === "success"
-                                ? "bg-emerald-500/10 text-emerald-500"
-                                : run.status === "failed"
-                                ? "bg-rose-500/10 text-rose-500"
-                                : "bg-amber-500/10 text-amber-500"
-                            }`}>
-                              {run.status === "success" ? "Thành công" : run.status === "failed" ? "Thất bại" : "Lỗi một phần"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 font-medium text-[hsl(var(--muted-foreground))]">
-                            {run.trigger_type === "scheduled"
-                              ? "Tự động theo lịch"
-                              : run.trigger_type === "manual_fast"
-                              ? "Quét nhanh thủ công"
-                              : "Quét nâng cao thủ công"}
-                          </td>
-                          <td className="px-4 py-3 text-center text-[hsl(var(--foreground))]">{run.crawled_count}</td>
-                          <td className="px-4 py-3 text-center text-[hsl(var(--foreground))]">{run.new_articles}</td>
-                          <td className="px-4 py-3 text-center text-cyan-600 dark:text-cyan-400 font-semibold">{run.processed_count}</td>
-                          <td className="px-4 py-3 text-center text-[hsl(var(--foreground))]">{run.alerts_sent}</td>
-                          <td className="px-4 py-3 text-right text-[hsl(var(--muted-foreground))] font-mono">
-                            {run.elapsed_seconds.toFixed(1)}s
+              <div className="space-y-3">
+                <div className="overflow-x-auto rounded-xl border border-[hsl(var(--border))]">
+                  <table className="min-w-full divide-y divide-[hsl(var(--border))] text-left text-xs">
+                    <thead className="bg-[hsl(var(--secondary))]/35 font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                      <tr>
+                        <th className="px-3 py-3">Thời gian (GMT+7)</th>
+                        <th className="px-3 py-3">Trạng thái</th>
+                        <th className="px-3 py-3">Mô hình AI & Key</th>
+                        <th className="px-3 py-3">Tokens / Free TPM</th>
+                        <th className="px-3 py-3 text-center">Lỗi API (429/503)</th>
+                        <th className="px-3 py-3 text-center">Thô / Mới / Cụm</th>
+                        <th className="px-3 py-3 text-center">Cảnh báo</th>
+                        <th className="px-3 py-3 text-right">Thời lượng</th>
+                        <th className="px-3 py-3 text-center">Chi tiết</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[hsl(var(--border))]/60">
+                      {logs.recent_runs.length > 0 ? (
+                        logs.recent_runs.map((run) => (
+                          <tr key={run._id} className="hover:bg-[hsl(var(--secondary))]/20 transition-colors">
+                            <td className="px-3 py-3 font-medium whitespace-nowrap text-[hsl(var(--foreground))]">
+                              {formatVietnamDateTime(run.timestamp)}
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                run.status === "success"
+                                  ? "bg-emerald-500/10 text-emerald-500"
+                                  : run.status === "failed"
+                                  ? "bg-rose-500/10 text-rose-500"
+                                  : "bg-amber-500/10 text-amber-500"
+                              }`}>
+                                {run.status === "success" ? "Thành công" : run.status === "failed" ? "Thất bại" : "Lỗi một phần"}
+                              </span>
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5">
+                                <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                                  {run.llm_model || "gemini-3.8-flash"}
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded font-mono text-[10px] bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))] border border-[hsl(var(--border))]">
+                                  {run.llm_key_suffix || "N/A"}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap">
+                              {run.new_articles === 0 ? (
+                                <span className="text-[10px] text-[hsl(var(--muted-foreground))] font-mono">0 tok (Nghỉ)</span>
+                              ) : (
+                                <div className="flex flex-col">
+                                  <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400">
+                                    {(run.llm_tokens_used || 0).toLocaleString()} tok
+                                  </span>
+                                  <span className="text-[9px] text-[hsl(var(--muted-foreground))] font-mono">
+                                    / {(run.llm_free_tpm_limit ? (run.llm_free_tpm_limit / 1000).toFixed(0) : 200)}k TPM
+                                  </span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-3 py-3 text-center whitespace-nowrap">
+                              {(run.llm_errors_429 || 0) + (run.llm_errors_503 || 0) === 0 ? (
+                                <span className="text-[10px] text-emerald-500 font-semibold">0 lỗi</span>
+                              ) : (
+                                <div className="flex items-center justify-center gap-1 text-[10px] font-mono">
+                                  {run.llm_errors_429 ? (
+                                    <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold" title="Lỗi 429 (Rate limit)">
+                                      429:{run.llm_errors_429}
+                                    </span>
+                                  ) : null}
+                                  {run.llm_errors_503 ? (
+                                    <span className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-500 border border-rose-500/20 font-bold" title="Lỗi 503 (Overload)">
+                                      503:{run.llm_errors_503}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-3 py-3 text-center whitespace-nowrap text-xs">
+                              <span className="font-mono text-[hsl(var(--foreground))]">{run.crawled_count}</span>
+                              <span className="text-[hsl(var(--muted-foreground))] mx-1">/</span>
+                              <span className="font-mono font-semibold text-amber-500">{run.new_articles}</span>
+                              <span className="text-[hsl(var(--muted-foreground))] mx-1">/</span>
+                              <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400">{run.processed_count}</span>
+                            </td>
+                            <td className="px-3 py-3 text-center text-[hsl(var(--foreground))] font-mono">{run.alerts_sent}</td>
+                            <td className="px-3 py-3 text-right text-[hsl(var(--muted-foreground))] font-mono whitespace-nowrap">
+                              {run.elapsed_seconds.toFixed(1)}s
+                            </td>
+                            <td className="px-3 py-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedRun(run)}
+                                className="p-1.5 rounded-lg border border-[hsl(var(--border))] hover:bg-cyan-500/10 hover:border-cyan-500/30 text-[hsl(var(--muted-foreground))] hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
+                                title="Xem chi tiết hoạt động LLM"
+                              >
+                                <Info className="h-3.5 w-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={9} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">
+                            Chưa có lịch sử chạy crawl tin tức.
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={8} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">
-                          Chưa có lịch sử chạy crawl tin tức.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Modal Chi tiết hoạt động LLM */}
+                {selectedRun && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl relative">
+                      <div className="flex items-center justify-between border-b border-[hsl(var(--border))] pb-3">
+                        <div className="flex items-center gap-2">
+                          <Cpu className="h-5 w-5 text-cyan-500" />
+                          <div>
+                            <h3 className="text-base font-bold text-[hsl(var(--foreground))]">
+                              Chi tiết Hoạt động LLM & Quota Free Tier
+                            </h3>
+                            <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
+                              Thời gian: {formatVietnamDateTime(selectedRun.timestamp)} (Giờ Việt Nam UTC+7)
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRun(null)}
+                          className="p-1.5 rounded-lg border border-[hsl(var(--border))] hover:bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))]"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-4 text-xs">
+                        {/* Section 1: LLM Engine Details */}
+                        <div className="p-3.5 rounded-xl bg-[hsl(var(--secondary))]/30 border border-[hsl(var(--border))]/60 space-y-2.5">
+                          <h4 className="text-[11px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
+                            <Cpu className="h-3.5 w-3.5" />
+                            Thông số Mô hình AI
+                          </h4>
+                          <div className="grid grid-cols-2 gap-3 pt-1">
+                            <div>
+                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Mô hình (Model):</span>
+                              <span className="font-mono font-bold text-sm text-[hsl(var(--foreground))]">
+                                {selectedRun.llm_model || "gemini-3.8-flash"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Đuôi API Key sử dụng:</span>
+                              <span className="font-mono font-bold text-sm text-cyan-600 dark:text-cyan-400">
+                                {selectedRun.llm_key_suffix || "N/A"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Nhà cung cấp:</span>
+                              <span className="font-medium text-[hsl(var(--foreground))]">
+                                {selectedRun.llm_provider || "Google Gemini"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Trạng thái LLM:</span>
+                              <span className="font-semibold text-emerald-500">
+                                {selectedRun.llm_status === "idle"
+                                  ? "Nghỉ (không có tin mới)"
+                                  : selectedRun.llm_status === "success"
+                                  ? "Hoàn thành phân tích"
+                                  : selectedRun.llm_status || "Sẵn sàng"}
+                              </span>
+                            </div>
+                          </div>
+                          {selectedRun.llm_prompt_name && (
+                            <div className="pt-2 border-t border-[hsl(var(--border))]/40">
+                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Prompt áp dụng:</span>
+                              <span className="font-medium text-[hsl(var(--foreground))]">
+                                {selectedRun.llm_prompt_name}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Section 2: Consumption & Free Tier Limits */}
+                        <div className="p-3.5 rounded-xl bg-[hsl(var(--secondary))]/30 border border-[hsl(var(--border))]/60 space-y-2.5">
+                          <h4 className="text-[11px] font-bold uppercase tracking-wider text-[hsl(var(--foreground))] flex items-center gap-1.5">
+                            <Activity className="h-3.5 w-3.5 text-cyan-500" />
+                            Google AI Studio Free Tier & Quota
+                          </h4>
+                          <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                            <div className="p-2 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
+                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Tokens tiêu thụ / Free TPM</span>
+                              <span className="font-mono font-bold text-sm text-cyan-600 dark:text-cyan-400">
+                                {selectedRun.llm_tokens_used ? selectedRun.llm_tokens_used.toLocaleString() : "0"}
+                              </span>
+                              <span className="text-[9px] text-[hsl(var(--muted-foreground))] block">
+                                / {(selectedRun.llm_free_tpm_limit || 200000).toLocaleString()} TPM
+                              </span>
+                            </div>
+                            <div className="p-2 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
+                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Lỗi 429 (Rate Limit)</span>
+                              <span className={`font-mono font-bold text-sm ${selectedRun.llm_errors_429 > 0 ? "text-amber-500" : "text-emerald-500"}`}>
+                                {selectedRun.llm_errors_429 || 0} lần
+                              </span>
+                              <span className="text-[9px] text-[hsl(var(--muted-foreground))] block">Giới hạn: 20 RPD</span>
+                            </div>
+                            <div className="p-2 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
+                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Lỗi 503 (Overload)</span>
+                              <span className={`font-mono font-bold text-sm ${selectedRun.llm_errors_503 > 0 ? "text-rose-500" : "text-emerald-500"}`}>
+                                {selectedRun.llm_errors_503 || 0} lần
+                              </span>
+                              <span className="text-[9px] text-[hsl(var(--muted-foreground))] block">Google Server High Demand</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Section 3: Crawl Counts */}
+                        <div className="p-3.5 rounded-xl bg-[hsl(var(--secondary))]/30 border border-[hsl(var(--border))]/60 space-y-2.5">
+                          <h4 className="text-[11px] font-bold uppercase tracking-wider text-[hsl(var(--foreground))] flex items-center gap-1.5">
+                            <Database className="h-3.5 w-3.5 text-cyan-500" />
+                            Kết quả Thu thập & Cảnh báo
+                          </h4>
+                          <div className="grid grid-cols-4 gap-2 pt-1 text-center">
+                            <div className="p-2 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
+                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Tin thô</span>
+                              <span className="font-mono font-bold text-sm">{selectedRun.crawled_count}</span>
+                            </div>
+                            <div className="p-2 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
+                              <span className="text-[10px] text-amber-500 block">Tin mới</span>
+                              <span className="font-mono font-bold text-sm text-amber-500">{selectedRun.new_articles}</span>
+                            </div>
+                            <div className="p-2 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
+                              <span className="text-[10px] text-cyan-500 block">Cụm tin</span>
+                              <span className="font-mono font-bold text-sm text-cyan-600 dark:text-cyan-400">{selectedRun.processed_count}</span>
+                            </div>
+                            <div className="p-2 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
+                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Cảnh báo</span>
+                              <span className="font-mono font-bold text-sm">{selectedRun.alerts_sent}</span>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center text-[10px] text-[hsl(var(--muted-foreground))] pt-1">
+                            <span>Kiểu kích hoạt: {selectedRun.trigger_type === "scheduled" ? "Tự động theo lịch" : "Thủ công"}</span>
+                            <span>ID: {selectedRun._id}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRun(null)}
+                          className="px-4 py-2 rounded-xl border border-[hsl(var(--border))] hover:bg-[hsl(var(--secondary))] text-xs font-semibold"
+                        >
+                          Đóng
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

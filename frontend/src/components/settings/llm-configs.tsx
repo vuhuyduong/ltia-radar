@@ -22,6 +22,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { llmConfigsApi, llmPromptsApi } from "@/lib/api";
+import { formatVietnamDateTime } from "@/lib/date";
 
 interface LLMConfig {
   _id: string;
@@ -867,7 +868,7 @@ export default function LLMConfigsPage() {
                             )}
                           </div>
                           <span className="block text-[10px] text-[hsl(var(--muted-foreground))]">
-                            Cập nhật: {new Date(prompt.updated_at).toLocaleString("vi-VN")}
+                            Cập nhật: {formatVietnamDateTime(prompt.updated_at)}
                           </span>
                         </div>
 

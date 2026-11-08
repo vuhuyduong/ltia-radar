@@ -15,7 +15,7 @@ Fixes applied (audit 2026-06-20):
 import asyncio
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from typing import Optional
 from urllib.parse import urlparse
@@ -147,7 +147,8 @@ class CrawlNewsUseCase:
             date_to = date_to.replace(tzinfo=None)
 
         logger.info(f"🚀 Starting crawl cycle... (date_from={date_from}, date_to={date_to})")
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
+        self.llm_service.start_run_tracking()
 
         # Dynamically adjust rate limit from active model RPM
         rate_limit = await self.llm_service.get_rate_limit()
@@ -205,6 +206,25 @@ class CrawlNewsUseCase:
                     stats["errors"] += 1
 
             logger.info(f"🆕 New articles (after dedup): {stats['new_articles']}")
+
+            # Step 3.5: Recover any pending unprocessed raw_data articles from previous failed cycles
+            new_ids = {str(a.id) for a in new_articles if a.id}
+            try:
+                pending_docs = await self.raw_data_repo.find_unprocessed(
+                    limit=settings.llm_batch_max_articles * 2,
+                    hours_window=96,
+                )
+                recovered: list[RawData] = []
+                for pdoc in pending_docs:
+                    if str(pdoc.get("_id")) not in new_ids:
+                        recovered.append(RawData(**pdoc))
+                if recovered:
+                    logger.info(
+                        f"🔄 Recovered {len(recovered)} pending unprocessed raw articles from previous cycles"
+                    )
+                    new_articles.extend(recovered)
+            except Exception as rec_err:
+                logger.warning(f"Error recovering unprocessed raw articles: {rec_err}")
 
             # Step 4: Pre-LLM deduplication against DB only
             # We still check against DB to avoid re-processing known articles
@@ -316,13 +336,19 @@ class CrawlNewsUseCase:
             logger.error(f"❌ Crawl cycle failed: {e}")
             stats["errors"] += 1
 
-        elapsed = (datetime.utcnow() - start_time).total_seconds()
+        elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
         logger.info(
             f"✅ Crawl cycle completed in {elapsed:.1f}s | "
             f"Crawled: {stats['crawled']}, New: {stats['new_articles']}, "
             f"Processed: {stats['processed']}, Alerts: {stats['alerts_sent']}, "
             f"Errors: {stats['errors']}"
         )
+
+        try:
+            llm_metrics = await self.llm_service.get_run_metrics()
+        except Exception as llm_m_err:
+            logger.warning(f"Failed to get LLM run metrics: {llm_m_err}")
+            llm_metrics = {}
 
         try:
             db = self.raw_data_repo.collection.database
@@ -335,10 +361,24 @@ class CrawlNewsUseCase:
                 "alerts_sent": stats["alerts_sent"],
                 "errors": stats["errors"],
                 "elapsed_seconds": elapsed,
-                "trigger_type": trigger_type
+                "trigger_type": trigger_type,
+                # LLM operational tracking
+                "llm_provider": llm_metrics.get("provider", "Google Gemini"),
+                "llm_model": llm_metrics.get("model_name", "gemini-3.8-flash"),
+                "llm_key_suffix": ", ".join(llm_metrics.get("key_suffixes", [])) or "N/A",
+                "llm_calls_count": llm_metrics.get("calls_count", 0),
+                "llm_tokens_used": llm_metrics.get("tokens_used", 0),
+                "llm_free_tpm_limit": llm_metrics.get("free_tpm_limit", 200000),
+                "llm_free_rpd_limit": llm_metrics.get("free_rpd_limit", 20),
+                "llm_free_rpm_limit": llm_metrics.get("free_rpm_limit", 5),
+                "llm_errors_429": llm_metrics.get("errors_429", 0),
+                "llm_errors_503": llm_metrics.get("errors_503", 0),
+                "llm_errors_other": llm_metrics.get("errors_other", 0),
+                "llm_prompt_name": llm_metrics.get("prompt_name", ""),
+                "llm_status": llm_metrics.get("status", "idle" if stats["new_articles"] == 0 else "success"),
             }
             await db.crawl_logs.insert_one(log_doc)
-            logger.info("💾 Saved crawl activity log to database")
+            logger.info("💾 Saved crawl activity log with LLM metrics to database")
         except Exception as log_err:
             logger.error(f"Failed to save crawl log: {log_err}")
 
@@ -399,11 +439,21 @@ class CrawlNewsUseCase:
         for ga in (grouped_articles or []):
             citations.append(self._make_citation(ga))
 
+        # Resolve publish_time: primary -> grouped articles -> crawl_time -> utcnow
+        pub_time = article.publish_time
+        if not pub_time and grouped_articles:
+            for ga in grouped_articles:
+                if ga.publish_time:
+                    pub_time = ga.publish_time
+                    break
+        if not pub_time:
+            pub_time = article.crawl_time or datetime.utcnow()
+
         processed = ProcessedData(
             raw_data_id=article.id,
             source_url=article.source_url,
             title=article.title,
-            publish_time=article.publish_time,
+            publish_time=pub_time,
             citations=citations,
             **insights,
         )

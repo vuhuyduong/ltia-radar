@@ -1,8 +1,8 @@
 """
 GeminiImplementation — Concrete LLM service using Google Gemini.
 Implements ILLMService interface (PRD Section 9.1).
-Supports key rotation, Free Tier rate limiting (RPM/TPM/RPD via KeyPool),
-exponential backoff on 503/429, structured JSON output, and DB configuration.
+Supports key rotation, multi-model fallback across per-model Free Tier quotas
+(RPM/TPM/RPD via KeyPool), structured JSON output, and DB configuration.
 """
 
 from __future__ import annotations
@@ -10,7 +10,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import random
 import re
 
 from google import genai
@@ -41,6 +40,17 @@ _FENCE_RE = re.compile(r"^```[a-z]*\n?(.*?)\n?```$", re.DOTALL)
 
 DEFAULT_MODEL = "gemini-3.8-flash"
 
+# Ordered fallback chain across distinct Gemini models (each has its own 20 RPD Free Tier quota)
+FALLBACK_MODELS: list[str] = [
+    "gemini-3.8-flash",
+    "gemini-3-flash-preview",
+    "gemini-2.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+]
+
 
 class GeminiImplementation(ILLMService):
     """
@@ -50,11 +60,9 @@ class GeminiImplementation(ILLMService):
       - Config (API keys, model name, prompts) is fetched from DB once per
         crawl cycle via _ensure_config() and held in instance-level cache.
       - Uses process-wide KeyPool (`get_pool()`) to enforce Free Tier RPM/TPM/RPD
-        limits across all requests and rotate keys based on earliest availability.
-      - Always uses `gemini-3.8-flash` with `thinking_level=HIGH` and structured
-        JSON schema output.
-      - Handles 429 (cooldown key and switch to next key) and 503 (exponential
-        backoff with jitter across keys).
+        limits per (key, model) slot and rotate across both keys and fallback models.
+      - Disables google-genai internal 5x retry (`HttpRetryOptions(attempts=1)`) so a
+        single 429/503 does not silently burn 5 RPD requests or hang for 2+ minutes.
     """
 
     def __init__(self) -> None:
@@ -64,14 +72,27 @@ class GeminiImplementation(ILLMService):
         self._cached_model: str | None = None
         self._cached_sys_prompt: str | None = None
         self._cached_batch_prompt: str | None = None
+        self._cached_prompt_name: str | None = None
         self._clients: dict[str, genai.Client] = {}
+        self.start_run_tracking()
 
     def _get_client(self, key: str) -> genai.Client:
         client = self._clients.get(key)
         if client is None:
-            client = genai.Client(api_key=key)
+            client = genai.Client(
+                api_key=key,
+                http_options=types.HttpOptions(
+                    timeout=45000,
+                    retry_options=types.HttpRetryOptions(attempts=1),
+                ),
+            )
             self._clients[key] = client
         return client
+
+    def _get_models_to_try(self) -> list[str]:
+        primary = self._cached_model or DEFAULT_MODEL
+        models = [primary] + [m for m in FALLBACK_MODELS if m != primary]
+        return models
 
     # ------------------------------------------------------------------
     # Config management
@@ -88,7 +109,8 @@ class GeminiImplementation(ILLMService):
         keys: list[str] = []
         if isinstance(configs_result, list) and configs_result:
             keys = [c["api_key"].strip() for c in configs_result if c.get("api_key") and c["api_key"].strip()]
-            self._cached_model = DEFAULT_MODEL
+            db_model = (configs_result[0].get("model_name") or "").strip()
+            self._cached_model = db_model if db_model else DEFAULT_MODEL
         else:
             if isinstance(configs_result, Exception):
                 logger.error(f"Error fetching LLM configs from DB: {configs_result}")
@@ -107,11 +129,13 @@ class GeminiImplementation(ILLMService):
             batch_p = prompt_result.get("batch_system_prompt")
             self._cached_sys_prompt = sys_p if sys_p else SYSTEM_PROMPT
             self._cached_batch_prompt = batch_p if batch_p else BATCH_SYSTEM_PROMPT
+            self._cached_prompt_name = prompt_result.get("name") or "Prompt LTIA Radar v2.0"
         else:
             if isinstance(prompt_result, Exception):
                 logger.error(f"Error fetching LLM prompts from DB: {prompt_result}")
             self._cached_sys_prompt = SYSTEM_PROMPT
             self._cached_batch_prompt = BATCH_SYSTEM_PROMPT
+            self._cached_prompt_name = "Mặc định hệ thống"
 
     async def _ensure_config(self) -> None:
         if self._cached_keys is None:
@@ -130,6 +154,56 @@ class GeminiImplementation(ILLMService):
         num_keys = max(1, len(self._cached_keys or []))
         return settings.llm_rpm_per_key * num_keys
 
+    def start_run_tracking(self) -> None:
+        """Start/reset metrics tracking for an operational crawl cycle."""
+        self._run_calls_count = 0
+        self._run_tokens_used = 0
+        self._run_models_used: list[str] = []
+        self._run_keys_used: list[str] = []
+        self._run_errors_429 = 0
+        self._run_errors_503 = 0
+        self._run_errors_other = 0
+        self._run_errors: list[str] = []
+
+    async def get_run_metrics(self) -> dict:
+        """Retrieve LLM metrics and execution details for the current/latest cycle."""
+        await self._ensure_config()
+        active_keys = self._cached_keys or []
+        active_key_suffixes = [f"...{k[-4:]}" for k in active_keys if len(k) >= 4]
+        used_key_suffixes = [f"...{k[-4:]}" for k in getattr(self, "_run_keys_used", []) if len(k) >= 4]
+        models_used = getattr(self, "_run_models_used", [])
+        calls = getattr(self, "_run_calls_count", 0)
+        tokens = getattr(self, "_run_tokens_used", 0)
+        errors = getattr(self, "_run_errors", [])
+        prompt_name = getattr(self, "_cached_prompt_name", "") or "Prompt LTIA Radar v2.0"
+
+        model_name = models_used[0] if models_used else (self._cached_model or DEFAULT_MODEL)
+
+        pool = get_pool()
+        status = "success" if calls > 0 else "idle"
+        if errors and calls == 0:
+            status = "failed"
+        elif errors and calls > 0:
+            status = "partial_error"
+
+        return {
+            "provider": "Google Gemini",
+            "model_name": model_name,
+            "all_models_used": list(dict.fromkeys(models_used)),
+            "key_suffixes": list(dict.fromkeys(used_key_suffixes or active_key_suffixes)),
+            "calls_count": calls,
+            "tokens_used": tokens,
+            "free_tpm_limit": pool.tpm,
+            "free_rpd_limit": pool.rpd,
+            "free_rpm_limit": pool.rpm,
+            "errors_429": getattr(self, "_run_errors_429", 0),
+            "errors_503": getattr(self, "_run_errors_503", 0),
+            "errors_other": getattr(self, "_run_errors_other", 0),
+            "prompt_name": prompt_name,
+            "status": status,
+            "errors": errors,
+        }
+
     async def extract_insight(self, raw_text: str, title: str = "") -> dict:
         """Extract insights for a single article using Free Tier key pool & rotation."""
         await self._ensure_config()
@@ -143,7 +217,7 @@ class GeminiImplementation(ILLMService):
     async def extract_insights_batch(self, articles: list[dict]) -> list[dict]:
         """
         Extract clustered insights for a batch of articles in a single prompt.
-        Uses KeyPool for Free Tier RPM/TPM/RPD enforcement and key rotation.
+        Uses KeyPool for Free Tier RPM/TPM/RPD enforcement and key + model rotation.
         """
         if not articles:
             return []
@@ -171,30 +245,45 @@ class GeminiImplementation(ILLMService):
         est_tokens = estimate_tokens((self._cached_batch_prompt or "") + user_prompt) + 2048
 
         pool = get_pool()
-        model_to_try = DEFAULT_MODEL
+        models_to_try = self._get_models_to_try()
         last_error: Exception | None = None
-        max_attempts = max(4, len(keys) * 3)
+        max_attempts = max(6, len(keys) * len(models_to_try))
 
         for attempt in range(max_attempts):
-            key = await pool.acquire(keys, est_tokens)
+            key, model_to_try = await pool.acquire_slot(keys, models_to_try, est_tokens)
             client = self._get_client(key)
             try:
+                cfg = types.GenerateContentConfig(
+                    system_instruction=self._cached_batch_prompt,
+                    temperature=0.1,
+                    max_output_tokens=65536,
+                    response_mime_type="application/json",
+                    response_json_schema=BATCH_RESPONSE_SCHEMA,
+                )
+                thinking_cfg = self._thinking_config(model_to_try)
+                if thinking_cfg is not None:
+                    cfg.thinking_config = thinking_cfg
+
                 response = await client.aio.models.generate_content(
                     model=model_to_try,
                     contents=user_prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=self._cached_batch_prompt,
-                        temperature=0.1,
-                        max_output_tokens=65536,
-                        thinking_config=self._thinking_config(),
-                        response_mime_type="application/json",
-                        response_json_schema=BATCH_RESPONSE_SCHEMA,
-                    ),
+                    config=cfg,
                 )
 
                 actual_tok = getattr(getattr(response, "usage_metadata", None), "total_token_count", None)
-                pool.report_success(key, actual_tok, est_tokens)
-                self._cached_model = model_to_try
+                pool.report_success(key, actual_tok, est_tokens, model=model_to_try)
+                if not hasattr(self, "_run_calls_count"):
+                    self.start_run_tracking()
+                self._run_calls_count += 1
+                self._run_tokens_used += int(actual_tok or est_tokens or 0)
+                if model_to_try not in self._run_models_used:
+                    self._run_models_used.append(model_to_try)
+                if key not in self._run_keys_used:
+                    self._run_keys_used.append(key)
+                logger.info(
+                    f"✨ Gemini batch OK (model={model_to_try}, key={mask_key(key)}, "
+                    f"tokens={actual_tok or est_tokens})"
+                )
 
                 parsed = self._parse_llm_json(response.text or "[]")
                 if not isinstance(parsed, list):
@@ -249,35 +338,51 @@ class GeminiImplementation(ILLMService):
             except (json.JSONDecodeError, ValueError) as e:
                 last_error = e
                 logger.warning(
-                    f"Batch JSON parse error (attempt {attempt + 1}/{max_attempts}, key {mask_key(key)}): {e}"
+                    f"Batch JSON parse error (attempt {attempt + 1}/{max_attempts}, "
+                    f"model {model_to_try}, key {mask_key(key)}): {e}"
                 )
-                await asyncio.sleep(2.0)
+                await asyncio.sleep(1.5)
             except errors.APIError as e:
                 last_error = e
                 code = getattr(e, "code", None)
                 if code == 429:
+                    self._run_errors_429 += 1
                     retry_after, daily = parse_retry_delay(getattr(e, "details", None))
-                    pool.report_rate_limited(key, retry_after, daily)
+                    pool.report_rate_limited(key, retry_after, daily, model=model_to_try)
+                    self._run_errors.append(f"429 RateLimit [{model_to_try}] ({mask_key(key)}): retry in {retry_after or 'cooldown'}s")
                     continue
                 if code in (401, 403):
+                    self._run_errors_other += 1
                     pool.disable(key, 1800.0)
+                    self._run_errors.append(f"{code} AuthError [{model_to_try}] ({mask_key(key)})")
+                    continue
+                if code == 404:
+                    self._run_errors_other += 1
+                    pool.report_overloaded(key, model=model_to_try, cooldown_s=3600.0)
+                    self._run_errors.append(f"404 NotFound [{model_to_try}] ({mask_key(key)})")
                     continue
                 if code in (500, 502, 503, 504):
-                    backoff = min(45.0, (2 ** min(attempt, 4)) * 3.0 + random.uniform(1.0, 4.0))
-                    logger.warning(
-                        f"Gemini {code} overloaded (attempt {attempt + 1}/{max_attempts}, "
-                        f"key {mask_key(key)}) — backing off {backoff:.1f}s..."
-                    )
-                    await asyncio.sleep(backoff)
+                    self._run_errors_503 += 1
+                    pool.report_overloaded(key, model=model_to_try, cooldown_s=90.0)
+                    self._run_errors.append(f"{code} Overload [{model_to_try}] ({mask_key(key)})")
                     continue
-                logger.error(f"Batch API error (key {mask_key(key)}): {e}")
-                break
+                self._run_errors_other += 1
+                logger.error(f"Batch API error (model {model_to_try}, key {mask_key(key)}): {e}")
+                pool.report_overloaded(key, model=model_to_try, cooldown_s=60.0)
+                self._run_errors.append(f"APIError [{model_to_try}]: {e}")
+                continue
             except QuotaExhausted:
                 raise
             except Exception as e:
                 last_error = e
-                logger.error(f"Batch unexpected error (key {mask_key(key)}): {e}")
-                await asyncio.sleep(3.0)
+                self._run_errors_other += 1
+                self._run_errors.append(f"NetworkError [{model_to_try}]: {type(e).__name__}")
+                logger.warning(
+                    f"Batch timeout/network error (attempt {attempt + 1}/{max_attempts}, "
+                    f"model {model_to_try}, key {mask_key(key)}): {type(e).__name__}: {e}"
+                )
+                pool.report_overloaded(key, model=model_to_try, cooldown_s=90.0)
+                continue
 
         logger.error(f"Gemini batch analysis failed after {max_attempts} attempts: {last_error}")
         raise RuntimeError(f"Gemini batch analysis failed: {last_error}")
@@ -287,9 +392,11 @@ class GeminiImplementation(ILLMService):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _thinking_config() -> types.ThinkingConfig:
-        """Always use HIGH thinking effort for best accuracy on gemini-3.8-flash."""
-        return types.ThinkingConfig(thinking_level=types.ThinkingLevel.HIGH)
+    def _thinking_config(model: str = DEFAULT_MODEL) -> types.ThinkingConfig | None:
+        """Use HIGH thinking effort on Gemini 3.x models; omit for 2.5 models."""
+        if model.startswith("gemini-3"):
+            return types.ThinkingConfig(thinking_level=types.ThinkingLevel.HIGH)
+        return None
 
     async def _call_single_with_pool(
         self, keys: list[str], raw_text: str, title: str = ""
@@ -297,29 +404,40 @@ class GeminiImplementation(ILLMService):
         user_prompt = f"Tiêu đề: {title}\n\nNội dung:\n{(raw_text or '')[:4000]}"
         est_tokens = estimate_tokens((self._cached_sys_prompt or "") + user_prompt) + 1024
         pool = get_pool()
-        model_to_try = DEFAULT_MODEL
+        models_to_try = self._get_models_to_try()
         last_error: Exception | None = None
-        max_attempts = max(4, len(keys) * 2)
+        max_attempts = max(6, len(keys) * len(models_to_try))
 
         for attempt in range(max_attempts):
-            key = await pool.acquire(keys, est_tokens)
+            key, model_to_try = await pool.acquire_slot(keys, models_to_try, est_tokens)
             client = self._get_client(key)
             try:
+                cfg = types.GenerateContentConfig(
+                    system_instruction=self._cached_sys_prompt,
+                    temperature=0.1,
+                    max_output_tokens=8192,
+                    response_mime_type="application/json",
+                    response_json_schema=SINGLE_RESPONSE_SCHEMA,
+                )
+                thinking_cfg = self._thinking_config(model_to_try)
+                if thinking_cfg is not None:
+                    cfg.thinking_config = thinking_cfg
+
                 response = await client.aio.models.generate_content(
                     model=model_to_try,
                     contents=user_prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=self._cached_sys_prompt,
-                        temperature=0.1,
-                        max_output_tokens=8192,
-                        thinking_config=self._thinking_config(),
-                        response_mime_type="application/json",
-                        response_json_schema=SINGLE_RESPONSE_SCHEMA,
-                    ),
+                    config=cfg,
                 )
                 actual_tok = getattr(getattr(response, "usage_metadata", None), "total_token_count", None)
-                pool.report_success(key, actual_tok, est_tokens)
-                self._cached_model = model_to_try
+                pool.report_success(key, actual_tok, est_tokens, model=model_to_try)
+                if not hasattr(self, "_run_calls_count"):
+                    self.start_run_tracking()
+                self._run_calls_count += 1
+                self._run_tokens_used += int(actual_tok or est_tokens or 0)
+                if model_to_try not in self._run_models_used:
+                    self._run_models_used.append(model_to_try)
+                if key not in self._run_keys_used:
+                    self._run_keys_used.append(key)
                 parsed = self._parse_llm_json(response.text or "{}")
                 if not isinstance(parsed, dict):
                     raise ValueError("LLM did not return a JSON object")
@@ -328,33 +446,48 @@ class GeminiImplementation(ILLMService):
             except (json.JSONDecodeError, ValueError) as e:
                 last_error = e
                 logger.warning(f"Single JSON parse error (attempt {attempt + 1}/{max_attempts}): {e}")
-                await asyncio.sleep(2.0)
+                await asyncio.sleep(1.5)
             except errors.APIError as e:
                 last_error = e
                 code = getattr(e, "code", None)
                 if code == 429:
+                    self._run_errors_429 += 1
                     retry_after, daily = parse_retry_delay(getattr(e, "details", None))
-                    pool.report_rate_limited(key, retry_after, daily)
+                    pool.report_rate_limited(key, retry_after, daily, model=model_to_try)
+                    self._run_errors.append(f"429 RateLimit [{model_to_try}] ({mask_key(key)}): retry in {retry_after or 'cooldown'}s")
                     continue
                 if code in (401, 403):
+                    self._run_errors_other += 1
                     pool.disable(key, 1800.0)
+                    self._run_errors.append(f"{code} AuthError [{model_to_try}] ({mask_key(key)})")
+                    continue
+                if code == 404:
+                    self._run_errors_other += 1
+                    pool.report_overloaded(key, model=model_to_try, cooldown_s=3600.0)
+                    self._run_errors.append(f"404 NotFound [{model_to_try}] ({mask_key(key)})")
                     continue
                 if code in (500, 502, 503, 504):
-                    backoff = min(30.0, (2 ** min(attempt, 4)) * 2.5 + random.uniform(0.5, 2.5))
-                    logger.warning(
-                        f"Single Gemini {code} (attempt {attempt + 1}/{max_attempts}, "
-                        f"key {mask_key(key)}) — waiting {backoff:.1f}s..."
-                    )
-                    await asyncio.sleep(backoff)
+                    self._run_errors_503 += 1
+                    pool.report_overloaded(key, model=model_to_try, cooldown_s=90.0)
+                    self._run_errors.append(f"{code} Overload [{model_to_try}] ({mask_key(key)})")
                     continue
+                self._run_errors_other += 1
                 logger.error(f"Gemini single API error: {e}")
-                break
+                pool.report_overloaded(key, model=model_to_try, cooldown_s=60.0)
+                self._run_errors.append(f"APIError [{model_to_try}]: {e}")
+                continue
             except QuotaExhausted:
                 raise
             except Exception as e:
                 last_error = e
-                logger.error(f"Single unexpected error (attempt {attempt + 1}/{max_attempts}): {e}")
-                await asyncio.sleep(2.0)
+                self._run_errors_other += 1
+                self._run_errors.append(f"NetworkError [{model_to_try}]: {type(e).__name__}")
+                logger.warning(
+                    f"Single timeout/network error (attempt {attempt + 1}/{max_attempts}, "
+                    f"model {model_to_try}): {type(e).__name__}: {e}"
+                )
+                pool.report_overloaded(key, model=model_to_try, cooldown_s=90.0)
+                continue
 
         raise RuntimeError(f"Gemini single analysis failed: {last_error}")
 

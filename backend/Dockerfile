@@ -1,5 +1,8 @@
 FROM python:3.12-slim-bookworm
 
+ENV TZ=Asia/Ho_Chi_Minh
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 WORKDIR /workspace
 
 # Python dependencies

@@ -7,6 +7,8 @@ services:
     image: mongo:7.0
     container_name: ltia-mongodb-local
     restart: unless-stopped
+    environment:
+      TZ: Asia/Ho_Chi_Minh
     volumes:
       - ltia-mongo-local-data:/data/db
     healthcheck:
@@ -27,6 +29,7 @@ services:
     environment:
       PORT: "8000"
       MONGODB_URI: mongodb://mongodb:27017   # ghi đè URI Atlas trong env_file
+      TZ: Asia/Ho_Chi_Minh
     depends_on:
       mongodb:
         condition: service_healthy

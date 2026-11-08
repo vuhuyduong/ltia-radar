@@ -153,6 +153,43 @@ class RawDataRepository:
             return docs[0]["crawl_time"]
         return None
 
+    async def find_unprocessed(
+        self, limit: int = 30, hours_window: int = 96
+    ) -> list[dict]:
+        """
+        Find raw_data articles crawled within the last `hours_window` hours that
+        have not yet been stored in `processed_data` (neither as `raw_data_id`
+        nor cited in `citations.source_url`).
+        """
+        db = MongoDB.get_db()
+        existing_raw_ids: set[str] = set()
+        existing_urls: set[str] = set()
+        async for pdoc in db.processed_data.find(
+            {}, {"raw_data_id": 1, "source_url": 1, "citations.source_url": 1}
+        ):
+            if pdoc.get("raw_data_id"):
+                existing_raw_ids.add(str(pdoc["raw_data_id"]))
+            if pdoc.get("source_url"):
+                existing_urls.add(pdoc["source_url"])
+            for c in pdoc.get("citations") or []:
+                if isinstance(c, dict) and c.get("source_url"):
+                    existing_urls.add(c["source_url"])
+
+        query: dict = {}
+        if hours_window > 0:
+            query["crawl_time"] = {"$gte": datetime.utcnow() - timedelta(hours=hours_window)}
+
+        cursor = self.collection.find(query).sort("crawl_time", -1)
+        unprocessed: list[dict] = []
+        async for doc in cursor:
+            doc_id = str(doc["_id"])
+            src_url = doc.get("source_url", "")
+            if doc_id not in existing_raw_ids and src_url not in existing_urls:
+                unprocessed.append(_serialize_doc(doc))
+                if len(unprocessed) >= limit:
+                    break
+        return unprocessed
+
 
 class ProcessedDataRepository:
     """MongoDB repository for ProcessedData collection."""

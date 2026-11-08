@@ -104,3 +104,19 @@ export function formatArticleDate(dateInput: string | Date | null | undefined): 
   }
 }
 
+export function formatVietnamDateTime(dateInput: string | Date | null | undefined): string {
+  if (!dateInput) return "Chưa rõ";
+  const date = typeof dateInput === "string" ? new Date(ensureUtcString(dateInput)) : dateInput;
+  if (isNaN(date.getTime())) return "Chưa rõ";
+
+  const vnParts = getVietnamParts(date);
+  const hours = String(vnParts.hours).padStart(2, "0");
+  const minutes = String(vnParts.minutes).padStart(2, "0");
+  const seconds = String(vnParts.seconds).padStart(2, "0");
+  const day = String(vnParts.day).padStart(2, "0");
+  const month = String(vnParts.month).padStart(2, "0");
+  const year = vnParts.year;
+
+  return `${hours}:${minutes}:${seconds} ${day}/${month}/${year}`;
+}
+

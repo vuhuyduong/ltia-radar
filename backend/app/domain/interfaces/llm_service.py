@@ -39,4 +39,16 @@ class ILLMService(ABC):
         """
         return 10
 
+    def start_run_tracking(self) -> None:
+        """
+        Start/reset metrics tracking for an operational crawl cycle.
+        """
+        pass
+
+    async def get_run_metrics(self) -> dict:
+        """
+        Retrieve LLM metrics and execution details for the current/latest cycle.
+        """
+        return {}
+
 

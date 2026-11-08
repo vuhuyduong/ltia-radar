@@ -69,7 +69,7 @@ async def main() -> None:
             if isinstance(c, dict) and c.get("source_url"):
                 existing_urls.add(c["source_url"])
 
-    all_raw = await db.raw_data.find({}).to_list(length=None)
+    all_raw = await db.raw_data.find({}).sort("crawl_time", -1).to_list(length=None)
     raw_docs = [
         d
         for d in all_raw
@@ -152,13 +152,22 @@ async def main() -> None:
             else:
                 stats["irrelevant_now"] += 1
 
+            pub_time = primary_doc.get("publish_time")
+            if not pub_time:
+                for g in grouped_docs:
+                    if g.get("publish_time"):
+                        pub_time = g.get("publish_time")
+                        break
+            if not pub_time:
+                pub_time = primary_doc.get("crawl_time") or datetime.utcnow()
+
             insights = {k: v for k, v in cluster.items() if k not in ("source_indices", "index")}
             try:
                 processed = ProcessedData(
                     raw_data_id=str(primary_doc["_id"]),
                     source_url=primary_doc.get("source_url", ""),
                     title=primary_doc.get("title", ""),
-                    publish_time=primary_doc.get("publish_time"),
+                    publish_time=pub_time,
                     citations=citations,
                     **insights,
                 )

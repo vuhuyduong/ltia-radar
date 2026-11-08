@@ -114,21 +114,47 @@ async def test_llm_config(
         raise HTTPException(status_code=400, detail="API key is empty")
 
     try:
-        client = genai.Client(api_key=api_key)
-        response = await client.aio.models.generate_content(
-            model=model_name,
-            contents="Reply with 'Success' in one word.",
-            config=types.GenerateContentConfig(
-                thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel.HIGH),
-                max_output_tokens=256,
+        from app.infrastructure.llm.gemini import FALLBACK_MODELS
+
+        client = genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(
+                timeout=20000,
+                retry_options=types.HttpRetryOptions(attempts=1),
             ),
         )
-        response_text = response.text.strip() if response.text else ""
-        return {
-            "status": "success",
-            "message": f"Connection test passed ({model_name}, effort=HIGH)",
-            "response": response_text,
-        }
+        models_to_try = [model_name] + [m for m in FALLBACK_MODELS if m != model_name]
+        primary_err = None
+        for idx, m in enumerate(models_to_try[:3]):
+            try:
+                cfg = types.GenerateContentConfig(max_output_tokens=256)
+                if m.startswith("gemini-3"):
+                    cfg.thinking_config = types.ThinkingConfig(
+                        thinking_level=types.ThinkingLevel.HIGH
+                    )
+                response = await client.aio.models.generate_content(
+                    model=m,
+                    contents="Reply with 'Success' in one word.",
+                    config=cfg,
+                )
+                response_text = response.text.strip() if response.text else ""
+                if idx == 0:
+                    msg = f"Connection test passed ({m})"
+                else:
+                    msg = (
+                        f"API key valid — primary {model_name} busy/rate-limited, "
+                        f"auto-fallback succeeded via {m}"
+                    )
+                return {
+                    "status": "success",
+                    "message": msg,
+                    "response": response_text,
+                }
+            except Exception as ex:
+                if idx == 0:
+                    primary_err = ex
+                continue
+        raise primary_err or RuntimeError("All candidate models failed")
     except Exception as e:
         return {
             "status": "failed",

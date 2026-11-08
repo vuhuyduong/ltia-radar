@@ -1,5 +1,8 @@
 FROM node:20-alpine
 
+RUN apk add --no-cache tzdata
+ENV TZ=Asia/Ho_Chi_Minh
+
 WORKDIR /workspace
 
 # Dependencies

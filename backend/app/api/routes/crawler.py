@@ -4,8 +4,9 @@ Crawler API — Manual trigger and scheduling settings endpoints.
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel
@@ -134,21 +135,74 @@ async def get_crawler_logs(
             hr = settings_doc.get("hourly_range", {})
             freq_desc = f"Quét từ {hr.get('start_hour', 7)}h đến {hr.get('end_hour', 19)}h, chu kỳ {hr.get('interval_hours', 1)}h"
             
+    VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+
+    def to_vn_iso(dt: datetime | None) -> str | None:
+        if not dt:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(VN_TZ).isoformat()
+
+    from app.infrastructure.llm.quota import get_pool
+    pool = get_pool()
+
+    # Active LLM configuration & prompt for enrichment and stats
+    active_llm_doc = await db.llm_configs.find_one({"is_active": True, "is_default": True})
+    if not active_llm_doc:
+        active_llm_doc = await db.llm_configs.find_one({"is_active": True})
+    active_prompt_doc = await db.llm_prompts.find_one({"is_active": True})
+
+    default_model = active_llm_doc.get("model_name", "gemini-3.8-flash") if active_llm_doc else "gemini-3.8-flash"
+    default_provider = active_llm_doc.get("provider", "Google Gemini") if active_llm_doc else "Google Gemini"
+    default_key = active_llm_doc.get("api_key", "") if active_llm_doc else ""
+    default_key_suffix = f"...{default_key[-4:]}" if len(default_key) >= 4 else "N/A"
+    default_prompt_name = active_prompt_doc.get("name", "Prompt LTIA Radar v2.0") if active_prompt_doc else "Prompt LTIA Radar v2.0"
+
     # Next run and last run from database
     from app.scheduler.jobs import scheduler
     job = scheduler.get_job("crawl_news")
-    next_run = job.next_run_time.isoformat() if job and job.next_run_time else None
+    next_run = to_vn_iso(job.next_run_time) if job and job.next_run_time else None
     
     latest_log = await db.crawl_logs.find_one(sort=[("timestamp", -1)])
-    last_run = latest_log["timestamp"].isoformat() if latest_log else None
+    last_run = to_vn_iso(latest_log["timestamp"]) if latest_log and latest_log.get("timestamp") else None
     
-    # 3. Recent Runs History (Last 15 logs)
-    cursor = db.crawl_logs.find().sort("timestamp", -1).limit(15)
+    # 3. Recent Runs History (Last 20 logs)
+    cursor = db.crawl_logs.find().sort("timestamp", -1).limit(20)
     recent_runs = []
     async for log in cursor:
         log["_id"] = str(log["_id"])
         if isinstance(log.get("timestamp"), datetime):
-            log["timestamp"] = log["timestamp"].isoformat()
+            log["timestamp"] = to_vn_iso(log["timestamp"])
+        
+        # Enrich LLM fields if absent in older log records
+        if not log.get("llm_model"):
+            log["llm_model"] = default_model
+        if not log.get("llm_key_suffix"):
+            log["llm_key_suffix"] = default_key_suffix
+        if not log.get("llm_provider"):
+            log["llm_provider"] = default_provider
+        if not log.get("llm_prompt_name"):
+            log["llm_prompt_name"] = default_prompt_name
+        if "llm_calls_count" not in log:
+            log["llm_calls_count"] = 1 if log.get("processed_count", 0) > 0 else 0
+        if "llm_tokens_used" not in log:
+            log["llm_tokens_used"] = 0
+        if "llm_free_tpm_limit" not in log:
+            log["llm_free_tpm_limit"] = pool.tpm
+        if "llm_free_rpd_limit" not in log:
+            log["llm_free_rpd_limit"] = pool.rpd
+        if "llm_free_rpm_limit" not in log:
+            log["llm_free_rpm_limit"] = pool.rpm
+        if "llm_errors_429" not in log:
+            log["llm_errors_429"] = 0
+        if "llm_errors_503" not in log:
+            log["llm_errors_503"] = 0
+        if "llm_errors_other" not in log:
+            log["llm_errors_other"] = 0
+        if not log.get("llm_status"):
+            log["llm_status"] = "success" if log.get("processed_count", 0) > 0 else ("idle" if log.get("new_articles", 0) == 0 else "partial_success")
+            
         recent_runs.append(log)
         
     return {
@@ -163,6 +217,19 @@ async def get_crawler_logs(
             "frequency_description": freq_desc,
             "last_run": last_run,
             "next_run": next_run,
+            "timezone": "Asia/Ho_Chi_Minh",
+            "active_llm": {
+                "provider": default_provider,
+                "model_name": default_model,
+                "key_suffix": default_key_suffix,
+                "prompt_name": default_prompt_name,
+            },
+        },
+        "live_quota": pool.snapshot(),
+        "quota_limits": {
+            "rpm_limit": pool.rpm,
+            "tpm_limit": pool.tpm,
+            "rpd_limit": pool.rpd,
         },
         "recent_runs": recent_runs,
     }

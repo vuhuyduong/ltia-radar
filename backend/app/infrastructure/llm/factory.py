@@ -35,6 +35,16 @@ class DynamicLLMService(ILLMService):
     async def get_rate_limit(self) -> int:
         return await self._get_gemini().get_rate_limit()
 
+    def start_run_tracking(self) -> None:
+        self._get_gemini().start_run_tracking()
+        if self._groq:
+            self._groq.start_run_tracking()
+
+    async def get_run_metrics(self) -> dict:
+        if self._groq and getattr(self._groq, "_run_calls_count", 0) > 0:
+            return await self._groq.get_run_metrics()
+        return await self._get_gemini().get_run_metrics()
+
     async def _has_groq_keys(self) -> bool:
         groq_service = self._get_groq()
         await groq_service._ensure_config()  # type: ignore[attr-defined]
@@ -54,7 +64,10 @@ class DynamicLLMService(ILLMService):
         gemini_service = self._get_gemini()
         try:
             return await gemini_service.extract_insights_batch(articles)
-        except QuotaExhausted:
+        except QuotaExhausted as qe:
+            if await self._has_groq_keys():
+                logger.warning(f"Gemini quota exhausted ({qe}). Falling back to Groq...")
+                return await self._get_groq().extract_insights_batch(articles)
             raise
         except Exception as e:
             if await self._has_groq_keys():

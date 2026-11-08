@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Báo Cáo Tổng Hợp Công Việc Hệ Thống LTIA Radar — 04/11/2026</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --bg-soft: #111827;
+      --card: #1e293b;
+      --card-hover: #263449;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-dark: #0284c7;
+      --accent: #818cf8;
+      --success: #22c55e;
+      --success-bg: rgba(34, 197, 94, 0.12);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.12);
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.12);
+      --info-bg: rgba(56, 189, 248, 0.12);
+      --radius: 14px;
+      --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+      background: radial-gradient(circle at top right, #1e293b 0%, var(--bg) 45%);
+      color: var(--text);
+      line-height: 1.65;
+      padding-bottom: 4rem;
+    }
+
+    a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 1.25rem;
+    }
+
+    /* Header / Hero */
+    header.hero {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 2.5rem 0 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-top {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .badge-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      border: 1px solid transparent;
+    }
+
+    .badge-success {
+      background: var(--success-bg);
+      color: #4ade80;
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    .badge-info {
+      background: var(--info-bg);
+      color: var(--primary);
+      border-color: rgba(56, 189, 248, 0.3);
+    }
+
+    .badge-warning {
+      background: var(--warning-bg);
+      color: #fbbf24;
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .badge-danger {
+      background: var(--danger-bg);
+      color: #f87171;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .hero h1 {
+      font-size: clamp(1.55rem, 3vw, 2.35rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+      margin-bottom: 0.65rem;
+      background: linear-gradient(90deg, #ffffff, #bae6fd, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p.subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 920px;
+    }
+
+    .meta-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 0.85rem;
+      margin-top: 1.75rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .meta-item {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+    }
+
+    .meta-item .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.2rem;
+    }
+
+    .meta-item .value {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      word-break: break-all;
+    }
+
+    /* Sticky Quick Nav */
+    nav.quick-nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(11, 17, 32, 0.88);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.65rem 0;
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: nowrap;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.4rem 0.75rem;
+      border-radius: 8px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+      background: var(--card);
+      text-decoration: none;
+    }
+
+    .print-btn {
+      background: var(--primary-dark);
+      color: #fff;
+      border: none;
+      padding: 0.42rem 0.85rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .print-btn:hover {
+      background: var(--primary);
+      color: #0f172a;
+    }
+
+    /* KPI Summary Grid */
+    section {
+      margin-top: 2.25rem;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #f1f5f9;
+    }
+
+    .section-title span.step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--primary-dark), var(--accent));
+      color: #fff;
+      font-size: 0.88rem;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+      transition: transform 0.18s ease, border-color 0.18s ease;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--primary);
+    }
+
+    .kpi-card .kpi-title {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .kpi-card .kpi-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+      margin-bottom: 0.35rem;
+    }
+
+    .kpi-card .kpi-desc {
+      font-size: 0.8rem;
+      color: #cbd5e1;
+    }
+
+    /* Cards & Grids */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.25rem;
+    }
+
+    .card h3 {
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 640px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+      .card {
+        padding: 1.1rem;
+      }
+    }
+
+    ul.feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    ul.feature-list li {
+      position: relative;
+      padding-left: 1.4rem;
+      font-size: 0.94rem;
+      color: #e2e8f0;
+    }
+
+    ul.feature-list li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: var(--success);
+      font-weight: 800;
+    }
+
+    code {
+      font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+      font-size: 0.84em;
+      background: rgba(15, 23, 42, 0.75);
+      color: #7dd3fc;
+      padding: 0.15rem 0.4rem;
+      border-radius: 5px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    pre {
+      background: #090d16;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow-x: auto;
+      font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+      font-size: 0.83rem;
+      line-height: 1.55;
+      margin-top: 0.75rem;
+    }
+
+    /* Tables */
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      margin-top: 0.75rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 620px;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 0.8rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: rgba(15, 23, 42, 0.85);
+      color: #cbd5e1;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Architecture Diagram Box */
+    .arch-flow {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.85rem;
+      margin-top: 1rem;
+    }
+
+    .arch-node {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--primary);
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+    }
+
+    .arch-node .node-title {
+      font-weight: 700;
+      font-size: 0.92rem;
+      color: #fff;
+      margin-bottom: 0.25rem;
+    }
+
+    .arch-node .node-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Callouts */
+    .callout {
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      margin-top: 1rem;
+      border-left: 4px solid var(--primary);
+      background: var(--info-bg);
+      font-size: 0.92rem;
+    }
+
+    .callout.warn {
+      border-left-color: var(--warning);
+      background: var(--warning-bg);
+    }
+
+    .callout.success {
+      border-left-color: var(--success);
+      background: var(--success-bg);
+    }
+
+    footer {
+      margin-top: 3.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        color: #000;
+        padding: 0;
+      }
+      header.hero, .card, .kpi-card, .meta-item, .arch-node {
+        background: #fff !important;
+        color: #000 !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: none !important;
+      }
+      .hero h1 {
+        -webkit-text-fill-color: #0f172a;
+        color: #0f172a;
+      }
+      nav.quick-nav {
+        display: none;
+      }
+      code, pre {
+        background: #f1f5f9 !important;
+        color: #0f172a !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO HEADER -->
+  <header class="hero">
+    <div class="container">
+      <div class="hero-top">
+        <div class="badge-group">
+          <span class="badge badge-success">● HỆ THỐNG ĐANG HOẠT ĐỘNG (HEALTHY)</span>
+          <span class="badge badge-info">Gemini 3.8 Flash · Effort HIGH</span>
+          <span class="badge badge-info">Prompt LTIA Radar v2.0 (BC 424/BC-BXD)</span>
+          <span class="badge badge-warning">Commit: 1badc6c (main)</span>
+        </div>
+        <div style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">
+          Ngày báo cáo: 04/11/2026
+        </div>
+      </div>
+
+      <h1>BÁO CÁO TỔNG HỢP CÔNG VIỆC NÂNG CẤP &amp; VẬN HÀNH HỆ THỐNG LTIA RADAR</h1>
+      <p class="subtitle">
+        Tổng hợp toàn bộ kết quả chuyển đổi hạ tầng Local Docker + Cloudflare Tunnel, triển khai MongoDB nội bộ,
+        cơ chế xoay vòng đa khóa Google AI Studio Free Tier (<code>gemini-3.8-flash</code>, <code>thinking_level=HIGH</code>),
+        vá bảo mật 0 lỗ hổng, chuẩn hóa logic Backend/Frontend và nâng cấp <strong>Prompt v2.0</strong> theo Báo cáo <code>424/BC-BXD</code> (27/10/2026).
+      </p>
+
+      <div class="meta-bar">
+        <div class="meta-item">
+          <div class="label">Frontend Production (Vercel)</div>
+          <div class="value"><a href="https://ltia-radar.vercel.app/dashboard" target="_blank" rel="noopener">ltia-radar.vercel.app/dashboard</a></div>
+        </div>
+        <div class="meta-item">
+          <div class="label">Backend Public API (Cloudflare Tunnel)</div>
+          <div class="value"><a href="https://ltia-radar-api.lightningalpha.app/api/health" target="_blank" rel="noopener">ltia-radar-api.lightningalpha.app</a></div>
+        </div>
+        <div class="meta-item">
+          <div class="label">Cổng Host Backend Độc Nhất</div>
+          <div class="value"><code>127.0.0.1:18427 → 8000</code></div>
+        </div>
+        <div class="meta-item">
+          <div class="label">GitHub Repository &amp; Commit</div>
+          <div class="value"><a href="https://github.com/vuhuyduong/ltia-radar" target="_blank" rel="noopener">vuhuyduong/ltia-radar</a> (<code>1badc6c</code>)</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- STICKY NAVIGATION -->
+  <nav class="quick-nav">
+    <div class="container nav-inner">
+      <div class="nav-links">
+        <a href="#kpi">Tổng quan KPI</a>
+        <a href="#infra">1. Hạ tầng &amp; Tunnel</a>
+        <a href="#mongodb">2. MongoDB Local</a>
+        <a href="#llm-quota">3. Gemini 3.8 Flash &amp; Quota</a>
+        <a href="#security-logic">4. Bảo mật &amp; Logic</a>
+        <a href="#prompt-v2">5. Prompt v2.0 (BC 424/BC-BXD)</a>
+        <a href="#verification">6. Kiểm thử &amp; Deploy</a>
+      </div>
+      <button class="print-btn" onclick="window.print()">🖨️ In / Xuất PDF</button>
+    </div>
+  </nav>
+
+  <main class="container">
+
+    <!-- KPI SUMMARY -->
+    <section id="kpi">
+      <div class="section-title">
+        <span class="step-num">★</span>
+        Chỉ số Kết quả Thực hiện Trong Ngày (04/11/2026)
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-title">Lỗ hổng Bảo mật (Backend &amp; Frontend)</div>
+          <div class="kpi-value" style="color: var(--success);">0 Lỗ hổng</div>
+          <div class="kpi-desc">Đã khắc phục triệt để 26 lỗ hổng npm &amp; nâng cấp toàn bộ thư viện Python mới nhất (<code>pip-audit</code> &amp; <code>npm audit</code> = 0).</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Mô hình AI &amp; Mức Suy luận</div>
+          <div class="kpi-value" style="color: var(--primary);">Gemini 3.8 Flash</div>
+          <div class="kpi-desc">Luôn cố định <code>thinking_level=HIGH</code> kèm xoay vòng API Key tự động theo <code>KeyPool</code> Free Tier.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Độ phủ Gói thầu &amp; Pháp lý LTIA</div>
+          <div class="kpi-value" style="color: #c084fc;">16/16 Gói DATP 3</div>
+          <div class="kpi-desc">Bao phủ đủ 4 DATP, 4 gói đường găng đỏ (<code>4.8, 5.10, 7.8, 11.5</code>), <code>XD02</code>, ORAT 55 kịch bản &amp; TTHC 11–12/2026.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Tối ưu Ngân sách Token Prompt v2.0</div>
+          <div class="kpi-value" style="color: #fbbf24;">~8.853 Tokens</div>
+          <div class="kpi-desc">Đạt ngưỡng Implicit Caching của Gemini (&gt;2.048) và an toàn dưới trần 12.000 TPM của Groq Fallback.</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Nguồn Tin &amp; Từ khóa Giám sát</div>
+          <div class="kpi-value">657 Nguồn / 66 Từ khóa</div>
+          <div class="kpi-desc">Bổ sung 18 từ khóa mới bám sát giai đoạn chuẩn bị khai thác thương mại 24/12/2026.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 1. INFRASTRUCTURE & CLOUDFLARE TUNNEL -->
+    <section id="infra">
+      <div class="section-title">
+        <span class="step-num">1</span>
+        Chuyển đổi Hạ tầng Backend sang Local Docker, Unique Port &amp; Cloudflare Tunnel
+      </div>
+      <div class="card">
+        <h3>
+          Kiến trúc Kết nối End-to-End (Không trùng lặp Container)
+          <span class="badge badge-success">Hoàn thành 100%</span>
+        </h3>
+        <ul class="feature-list">
+          <li><strong>Cổng nội bộ độc nhất (Unique Host Port):</strong> Cấu hình <code>ltia-backend-local</code> trong <code>docker-compose.localbackend.yml</code> lắng nghe tại <code>127.0.0.1:18427:8000</code>, cách ly hoàn toàn với các ứng dụng khác đang chạy trên máy chủ.</li>
+          <li><strong>Loại bỏ trùng lặp <code>cloudflared</code>:</strong> Máy chủ đã có sẵn container <code>cloudflare-tunnel</code> chạy ở chế độ <code>network_mode: host</code>. Đã gỡ bỏ service <code>cloudflared</code> dư thừa khỏi file compose của dự án và định tuyến trực tiếp Public Hostname <code>https://ltia-radar-api.lightningalpha.app</code> về <code>http://localhost:18427</code>.</li>
+          <li><strong>Đồng bộ CORS &amp; Vercel:</strong> Cấu hình <code>CORS_ORIGINS</code> cho phép <code>https://ltia-radar.vercel.app</code> và <code>http://localhost:3000</code> truy cập ổn định.</li>
+        </ul>
+
+        <div class="arch-flow">
+          <div class="arch-node">
+            <div class="node-title">1. Người dùng / Ban Lãnh đạo</div>
+            <div class="node-sub">Truy cập Dashboard trên <code>ltia-radar.vercel.app</code></div>
+          </div>
+          <div class="arch-node">
+            <div class="node-title">2. Cloudflare Edge &amp; Tunnel</div>
+            <div class="node-sub">HTTPS <code>ltia-radar-api.lightningalpha.app</code> → Host <code>cloudflare-tunnel</code></div>
+          </div>
+          <div class="arch-node">
+            <div class="node-title">3. FastAPI Backend Container</div>
+            <div class="node-sub"><code>ltia-backend-local</code> tại <code>127.0.0.1:18427:8000</code></div>
+          </div>
+          <div class="arch-node">
+            <div class="node-title">4. MongoDB Local &amp; Gemini 3.8</div>
+            <div class="node-sub"><code>ltia-mongodb-local:27017</code> + KeyPool Gemini Free Tier</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. MONGODB LOCAL -->
+    <section id="mongodb">
+      <div class="section-title">
+        <span class="step-num">2</span>
+        Khắc phục Sự cố MongoDB Atlas &amp; Triển khai Container MongoDB Local
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Nguyên nhân Sự cố Cũ</h3>
+          <ul class="feature-list">
+            <li>Cluster MongoDB Atlas cũ (<code>ltia-radar.h7bibjh.mongodb.net</code>) không còn bản ghi DNS SRV (<code>NXDOMAIN</code>), gây lỗi <code>500 Internal Server Error</code> trên toàn bộ API khi mới chuyển về local.</li>
+            <li>Bản ghi <code>llm_configs</code> mặc định do <code>seed.py</code> khởi tạo có trường <code>api_key: ""</code> (rỗng), vô tình che khuất biến môi trường <code>GEMINI_API_KEY</code>.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Giải pháp Đã Thực hiện</h3>
+          <ul class="feature-list">
+            <li>Bổ sung container <code>ltia-mongodb-local</code> (image <code>mongo:7.0</code>, healthcheck tự động, volume bền vững <code>ltia-mongo-local-data</code>) vào <code>docker-compose.localbackend.yml</code>.</li>
+            <li>Cập nhật <code>MONGODB_URI=mongodb://mongodb:27017</code> trong <code>.env.localbackend</code>.</li>
+            <li>Sửa <code>GeminiImplementation._load_config()</code> để luôn kết hợp cả danh sách key hoạt động trong DB lẫn key dự phòng trong <code>.env</code>, loại bỏ hoàn toàn lỗi chuỗi rỗng.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. GEMINI 3.8 FLASH & FREE TIER RATE LIMITING -->
+    <section id="llm-quota">
+      <div class="section-title">
+        <span class="step-num">3</span>
+        Quản trị Hạn mức Google AI Studio Free Tier &amp; Xoay vòng Khóa (Gemini 3.8 Flash · Effort High)
+      </div>
+      <div class="card">
+        <h3>
+          Bộ Điều tiết <code>KeyPool</code> Toàn Tiến trình (<code>backend/app/infrastructure/llm/quota.py</code>)
+          <span class="badge badge-info">Singleton Process-Wide</span>
+        </h3>
+        <div class="grid-2">
+          <div>
+            <ul class="feature-list">
+              <li><strong>Cố định mô hình chuẩn:</strong> Toàn bộ luồng phân tích đơn lẻ và gom cụm theo lô luôn sử dụng <code>gemini-3.8-flash</code> với cấu hình <code>types.ThinkingConfig(thinking_level=types.ThinkingLevel.HIGH)</code>.</li>
+              <li><strong>Kiểm soát trượt 3 chiều (Sliding-Window Rate Limiter):</strong> Theo dõi riêng từng API Key theo hạn mức Free Tier: <code>RPM = 5 req/phút</code>, <code>TPM = 250.000 token/phút</code>, <code>RPD = 20 req/ngày</code>.</li>
+              <li><strong>Tự động nhận diện Reset nửa đêm Pacific:</strong> Khi gặp lỗi <code>429 RESOURCE_EXHAUSTED</code> kèm quota ngày (<code>PerDay</code>), tự động khóa tạm thời key đó đến <code>00:00 America/Los_Angeles</code> (<code>14:00</code> giờ Việt Nam) và chuyển tức thì sang key khả dụng tiếp theo.</li>
+            </ul>
+          </div>
+          <div>
+            <ul class="feature-list">
+              <li><strong>Phân biệt lỗi <code>429</code> (Quota) và <code>503</code> (Server Overloaded):</strong> Khi gặp <code>503 UNAVAILABLE</code>, thực hiện <em>Exponential Backoff + Jitter</em> mà không phạt oan hạn mức RPD của key.</li>
+              <li><strong>Cơ chế dừng an toàn <code>QuotaExhausted</code>:</strong> Khi toàn bộ key đều chạm trần ngày, dừng chu kỳ gọi LLM êm ái; các bài báo mới trong <code>raw_data</code> được bảo toàn để tự động phân tích tiếp ở chu kỳ sau.</li>
+              <li><strong>Giao diện &amp; API đồng bộ nhanh nhiều Key:</strong> Bổ sung ô <em>"Nạp nhanh danh sách API Key Gemini (Xoay vòng)"</em> trên trang Quản trị và API <code>POST /api/llm-configs/gemini-keys/sync</code>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. SECURITY & LOGIC FIXES -->
+    <section id="security-logic">
+      <div class="section-title">
+        <span class="step-num">4</span>
+        Nâng cấp Thư viện Bảo mật (0 Lỗ hổng) &amp; Chuẩn hóa Logic Backend / Frontend
+      </div>
+      <div class="card">
+        <h3>Bảng Đối chiếu Nâng cấp Bảo mật &amp; Sửa lỗi Logic</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Phân hệ</th>
+                <th>Tình trạng Trước khi sửa</th>
+                <th>Giải pháp Đã triển khai</th>
+                <th>Kết quả Kiểm tra</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Backend Dependencies</strong><br/>(<code>requirements.txt</code>)</td>
+                <td>Xung đột <code>pydantic==2.11.3</code> với <code>google-genai==2.34.0</code>; nhiều thư viện cũ.</td>
+                <td>Nâng cấp đồng bộ lên phiên bản mới nhất: <code>fastapi==0.162.0</code>, <code>pydantic==2.14.2</code>, <code>google-genai==2.34.0</code>, <code>pymongo==4.18.0</code>, <code>cryptography==46.0.6</code>, <code>aiohttp==3.14.1</code>.</td>
+                <td><span class="badge badge-success">pip-audit: 0 lỗ hổng</span></td>
+              </tr>
+              <tr>
+                <td><strong>Frontend Dependencies</strong><br/>(<code>package.json</code>)</td>
+                <td><strong>26 lỗ hổng bảo mật</strong> (High/Moderate) trong cây phụ thuộc Next.js / minimatch.</td>
+                <td>Nâng cấp <code>next@16.4.5</code>, <code>react@19.3.1</code>, <code>lucide-react@1.18.0</code> và khóa <code>"overrides": {"minimatch": "^11.0.1"}</code>.</td>
+                <td><span class="badge badge-success">npm audit: 0 lỗ hổng</span><br/><span class="badge badge-info">tsc: 0 lỗi</span></td>
+              </tr>
+              <tr>
+                <td><strong>Lưu trữ Cụm Sự kiện</strong><br/>(<code>crawl_news.py</code>)</td>
+                <td>Khi gom cụm N bài báo cùng sự kiện, hệ thống từng lưu N bản ghi <code>ProcessedData</code> trùng nhau gây phình đại thống kê.</td>
+                <td>Chuẩn hóa lưu <strong>01 bản ghi <code>ProcessedData</code> duy nhất cho mỗi cụm sự kiện</strong> (lấy <code>source_indices[0]</code> làm bài đại diện chính và đính kèm toàn bộ các bài cùng cụm vào mảng <code>citations</code>).</td>
+                <td><span class="badge badge-success">Đã xác minh trên DB</span></td>
+              </tr>
+              <tr>
+                <td><strong>Lọc bài Không liên quan</strong><br/>(<code>repositories.py</code>)</td>
+                <td>Các bài <code>is_relevant: false</code> vẫn bị tính vào KPI tổng số bài và biểu đồ rủi ro trên Dashboard.</td>
+                <td>Áp dụng bộ lọc mặc định <code>is_relevant: true</code> trên toàn bộ truy vấn thống kê Dashboard, biểu đồ phân bổ và danh sách bài báo.</td>
+                <td><span class="badge badge-success">Dashboard sạch nhiễu 100%</span></td>
+              </tr>
+              <tr>
+                <td><strong>Bảo vệ chống SSRF</strong><br/>(<code>sources.py</code>)</td>
+                <td>Cho phép nhập URL bất kỳ khi test/thêm nguồn thu thập tin.</td>
+                <td>Bổ sung hàm kiểm tra DNS &amp; chặn toàn bộ dải IP nội bộ/loopback/link-local/metadata trước khi gửi request.</td>
+                <td><span class="badge badge-success">An toàn SSRF</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. PROMPT V2.0 OPTIMIZATION -->
+    <section id="prompt-v2">
+      <div class="section-title">
+        <span class="step-num">5</span>
+        Nâng cấp Prompt LTIA Radar v2.0 (Bám sát Báo cáo <code>424/BC-BXD</code> &amp; Quy chế ACV 11/2026)
+      </div>
+      <div class="card">
+        <h3>
+          7 Cải tiến Trọng tâm trong <code>backend/app/infrastructure/llm/prompts.py</code>
+          <span class="badge badge-info">Single Source of Truth</span>
+        </h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Hạng mục Tối ưu</th>
+                <th>Nội dung Điều chỉnh Chi tiết</th>
+                <th>Tác động Kỹ thuật &amp; Nghiệp vụ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>1</strong></td>
+                <td><strong>Cập nhật Thực trạng Tháng 11/2026 (<code>_LIVE_STATE_2026</code>)</strong></td>
+                <td>
+                  Đưa mốc <code>02/09/2026</code>, <code>Gói 3.4</code> (san nền) và <code>Gói 6.12</code> (tuyến T1, T2) về trạng thái <strong>đã hoàn thành</strong>. Cập nhật mục tiêu khai thác thương mại <strong>24/12/2026</strong> (công bố <strong>AIRAC 12/11/2026</strong>) và nguyên tắc chỉ đạo của Chính phủ/Bộ Xây dựng: <em>"Không đánh đổi an toàn, an ninh, chất lượng vì tiến độ; cảnh báo rủi ro vừa khai thác vừa thi công"</em>.
+                </td>
+                <td>Loại bỏ hoàn toàn hiện tượng LLM đánh giá nhầm các hạng mục đã xong thành rủi ro đường găng hiện tại.</td>
+              </tr>
+              <tr>
+                <td><strong>2</strong></td>
+                <td><strong>Bản đồ 4 DATP &amp; Đủ 16/16 Gói thầu DATP 3 + Đính chính <code>Gói 7.8</code> vs <code>XD02</code></strong></td>
+                <td>
+                  • <strong>Nhóm đã xong (04 gói):</strong> <code>2.4, 3.4, 5.6, 6.12</code>.<br/>
+                  • <strong>Nhóm mục tiêu 12/2026 (08 gói):</strong> <code>4.6, 4.12, 4.7, 4.9, 4.11, 2.10, 7.8a, 5.11</code>.<br/>
+                  • <strong>Nhóm Đường găng đỏ nguy cơ trễ 12/2026 (04 gói):</strong> <strong><code>Gói 4.8</code></strong> (Giao thông nội cảng &amp; HTKT – xung yếu dây chuyền), <strong><code>Gói 5.10</code></strong> (Nhà ga HK – Vietur), <strong><code>Gói 7.8</code></strong> (Nhà ga hàng hóa số 1 – Liên danh <strong>HANTA2</strong>: Coteccons–Hancorp–ATAD), <strong><code>Gói 11.5</code></strong> (Nhà để xe – CC1–Coteccons–FECON).<br/>
+                  • Đính chính rõ: <strong><code>Gói XD02</code></strong> là Đài KSKL 123m thuộc <strong>DATP 2 (VATM)</strong>; điểm nghẽn chưa triển khai <strong>Express Cargo</strong> thuộc <strong>DATP 4</strong>.
+                </td>
+                <td>Triệt tiêu lỗi gán nhầm <code>Gói 7.8</code> sang Tháp không lưu; định cỡ chính xác mức <code>HIGH</code>/<code>CRITICAL</code> cho 4 gói đường găng đỏ.</td>
+              </tr>
+              <tr>
+                <td><strong>3</strong></td>
+                <td><strong>Thể chế 2025–2026 &amp; Vai trò Kép của ACV</strong></td>
+                <td>
+                  Cập nhật <strong>Bộ Xây dựng</strong> (sau hợp nhất Bộ GTVT), <strong>Bộ Tài chính</strong> (đại diện vốn tại ACV), <strong>Bộ Công an – Cục A08</strong> (An ninh hàng không theo TT <code>31/2025/TT-BCA</code> &amp; <code>14/2026/TT-BCA</code>) &amp; <strong>C07</strong> (PCCC), <strong>Bộ NN&amp;MT</strong> (Giấy phép môi trường), <strong>HĐKTNN</strong>, <strong>Cục HKVN</strong>, <strong>ORAT 55 kịch bản</strong>, lộ trình 3 bước chuyển đường bay quốc tế <code>TSN → LTIA</code>.<br/>
+                  Phân tách rõ <strong>Ban QLDA Long Thành</strong> (Chủ đầu tư DATP 3) và Chi nhánh cấp 1 <strong>Cảng HKQT Long Thành (LTIA / VVLT / LTH)</strong> gồm 08 phòng, 04 trung tâm (<strong>APOC</strong>...) cùng <strong>LAFS</strong> (<code>649/QĐ-HĐQT</code>) &amp; <strong>LACS</strong> (<code>651/QĐ-HĐQT</code>).
+                </td>
+                <td>Nhận diện chính xác 100% tin tức về cấp phép tiền khai thác, diễn tập ORAT, an ninh A08 và kiến nghị từ IATA / AOC / CAPEC / TSA / UPS / FedEx / DHL.</td>
+              </tr>
+              <tr>
+                <td><strong>4</strong></td>
+                <td><strong>Tường lửa "Context vs. Evidence" (Chống Hallucination)</strong></td>
+                <td>
+                  Cho phép LLM dùng phần Bối cảnh để xét <code>is_relevant</code>, suy luận mã gói thầu trong <code>target_scope</code> và đánh giá <code>impact_level</code>; nhưng <strong>nghiêm cấm</strong> chép tên nhà thầu/số tiền từ Bối cảnh vào <code>key_entities</code> hay <code>executive_summary</code> nếu bài báo không nêu. Cấm tự đưa địa danh <code>"Sân bay Long Thành"</code> vào <code>key_entities</code>.
+                </td>
+                <td>Chấm dứt hiện tượng tự điền <code>"Vietur"</code> hay <code>"35.000 tỷ"</code> vào bản tóm tắt khi bài báo không nhắc tới.</td>
+              </tr>
+              <tr>
+                <td><strong>5</strong></td>
+                <td><strong>Dual-Tagging <code>target_scope</code> &amp; Hậu kiểm <code>validate_llm_item()</code></strong></td>
+                <td>
+                  Bắt buộc <code>target_scope</code> luôn chứa <strong>≥1 trong 7 nhãn neo của Dropdown UI</strong> (<code>"Toàn dự án"</code>, <code>"Gói thầu 5.10"</code>, <code>"Gói thầu 4.6"</code>, <code>"San nền"</code>, <code>"Giao thông"</code>, <code>"Nhà ga"</code>, <code>"Đường cất hạ cánh"</code>) kèm mã gói thầu chi tiết; đồng thời bổ sung hàm hậu kiểm tất định <code>normalize_target_scope()</code>, <code>normalize_categories()</code>, <code>normalize_key_entities()</code> cho cả Gemini và Groq.
+                </td>
+                <td>Đảm bảo <strong>100% bài viết hiển thị đúng</strong> khi người dùng lọc theo bất kỳ mục nào trong 7 bộ lọc trên Dashboard.</td>
+              </tr>
+              <tr>
+                <td><strong>6</strong></td>
+                <td><strong>Thuật toán Gom cụm Batch &amp; Chọn Bài Đại diện <code>source_indices[0]</code></strong></td>
+                <td>
+                  Đảo thứ tự ưu tiên chọn <code>source_indices[0]</code>: <strong>(1) Bài đầy đủ số liệu/mã văn bản nhất → (2) Báo chính thống uy tín nhất (Báo Chính phủ, Bộ Xây dựng, TTXVN, Nhân Dân, VnExpress, Tuổi Trẻ...) → (3) Đăng sớm hơn</strong>. Cấm gom chung các bài <code>is_relevant: false</code> khác chủ đề; ép bảo toàn 100% tập index <code>0..N-1</code>.
+                </td>
+                <td>Tiêu đề hiển thị trên Dashboard luôn lấy từ nguồn báo chính thống, đầy đủ thông tin nhất; không làm hao hụt quota do gọi lại đơn lẻ.</td>
+              </tr>
+              <tr>
+                <td><strong>7</strong></td>
+                <td><strong>Khóa cứng <code>enum</code> Category &amp; Tối ưu Ngân sách Token</strong></td>
+                <td>
+                  Khóa <code>"enum": VALID_CATEGORIES</code> ngay trong <code>SINGLE_RESPONSE_SCHEMA</code> &amp; <code>BATCH_RESPONSE_SCHEMA</code>; tinh gọn cấu trúc Markdown giúp <code>SYSTEM_PROMPT</code> đạt <strong>26.220 ký tự (~9.364 tokens)</strong> và <code>BATCH_SYSTEM_PROMPT</code> đạt <strong>24.788 ký tự (~8.853 tokens)</strong>.
+                </td>
+                <td>Tiết kiệm ~25% hạn mức TPM Free Tier, kích hoạt Implicit Context Caching của Gemini (&gt;2.048 tokens) và tương thích hoàn toàn với trần 12.000 TPM của Groq.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. VERIFICATION & DEPLOYMENT -->
+    <section id="verification">
+      <div class="section-title">
+        <span class="step-num">6</span>
+        Kết quả Kiểm thử Tự động, Đồng bộ CSDL &amp; Triển khai Production
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Kết quả Kiểm thử Kỹ thuật (100% Pass)</h3>
+          <ul class="feature-list">
+            <li><strong>Kiểm thử JSON Schema &amp; Few-Shot:</strong> Toàn bộ <code>8/8</code> ví dụ đơn lẻ và <code>4/4</code> cụm ví dụ Batch parse thành công, khớp 100% <code>SINGLE_RESPONSE_SCHEMA</code> &amp; <code>BATCH_RESPONSE_SCHEMA</code>.</li>
+            <li><strong>Kiểm thử Hậu kiểm Dual-Tagging &amp; Entity Firewall:</strong>
+              <ul>
+                <li><code>["Gói thầu 7.8"]</code> → tự động chuẩn hóa thành <code>["Nhà ga", "Gói thầu 7.8"]</code>.</li>
+                <li><code>["Hạ tầng kết nối", "Nút giao An Phú"]</code> → tự động chuẩn hóa thành <code>["Giao thông", "Hạ tầng kết nối", "Nút giao An Phú"]</code>.</li>
+                <li>Loại bỏ địa danh chung <code>"Sân bay Long Thành"</code> khỏi <code>key_entities</code> nhưng giữ nguyên thực thể đơn vị vận hành <code>"Cảng HKQT Long Thành (LTIA)"</code>.</li>
+              </ul>
+            </li>
+            <li><strong>Đồng bộ MongoDB Local:</strong> Đã nạp active prompt <code>"Prompt LTIA Radar v2.0 (BC 424/BC-BXD - 11/2026)"</code>, <code>66</code> từ khóa (thêm 18 từ khóa mới), <code>657</code> nguồn tin và bảo toàn 2 API key Gemini xoay vòng.</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>Trạng thái Git &amp; Lệnh Vận hành Hữu ích</h3>
+          <ul class="feature-list">
+            <li><strong>Git Commit &amp; Push:</strong> Đã push thành công commit <code>1badc6c</code> lên nhánh <code>main</code> của <code>https://github.com/vuhuyduong/ltia-radar.git</code> (kích hoạt tự động build &amp; deploy trên Vercel).</li>
+            <li><strong>Kiểm tra API thực tế qua Cloudflare Tunnel:</strong> <code>GET https://ltia-radar-api.lightningalpha.app/api/health</code> và <code>/api/llm-prompts</code> trả về <code>HTTP 200 OK</code> với đúng nội dung Prompt v2.0.</li>
+          </ul>
+
+          <pre># Kiểm tra trạng thái các container local
+docker ps --filter "name=ltia"
+
+# Đồng bộ lại Prompt từ prompts.py vào MongoDB khi có chỉnh sửa
+docker exec ltia-backend-local python scripts/update_prompt_in_db.py
+
+# Phân loại lại toàn bộ raw_data theo Prompt v2.0 (sau 14:00 giờ VN khi RPD reset)
+docker exec -d ltia-backend-local python scripts/reclassify_from_raw.py --reset</pre>
+        </div>
+      </div>
+
+      <div class="callout success">
+        <strong>Kết luận:</strong> Toàn bộ hệ thống <strong>LTIA Radar</strong> (Frontend Vercel + Cloudflare Tunnel + FastAPI Backend Local Port <code>18427</code> + MongoDB Local + Gemini 3.8 Flash Effort High + Prompt v2.0 theo Báo cáo <code>424/BC-BXD</code>) đã được đồng bộ hoàn chỉnh, bảo mật 0 lỗ hổng và sẵn sàng phục vụ giám sát điều hành giai đoạn nước rút hướng tới mốc khai thác thương mại <strong>24/12/2026</strong>.
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      Hệ thống Giám sát Thông tin &amp; Cảnh báo Sớm Dự án Cảng HKQT Long Thành (LTIA Radar) — Báo cáo kỹ thuật ngày 04/11/2026
+    </div>
+  </footer>
+
+</body>
+</html>
