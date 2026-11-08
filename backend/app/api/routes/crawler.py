@@ -4,7 +4,7 @@ Crawler API — Manual trigger and scheduling settings endpoints.
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -172,6 +172,7 @@ async def get_crawler_logs(
     recent_runs = []
     async for log in cursor:
         log["_id"] = str(log["_id"])
+        raw_ts = log.get("timestamp")
         if isinstance(log.get("timestamp"), datetime):
             log["timestamp"] = to_vn_iso(log["timestamp"])
         
@@ -203,6 +204,40 @@ async def get_crawler_logs(
         if not log.get("llm_status"):
             log["llm_status"] = "success" if log.get("processed_count", 0) > 0 else ("idle" if log.get("new_articles", 0) == 0 else "partial_success")
             
+        # Enrich articles_created & articles_grouped for detailed modal
+        if not log.get("articles_created"):
+            matched_articles = []
+            if log.get("processed_count", 0) > 0 and isinstance(raw_ts, datetime):
+                # Query processed_data created around this run's timestamp
+                ts_utc = raw_ts.replace(tzinfo=None) if raw_ts.tzinfo else raw_ts
+                t1 = ts_utc - timedelta(seconds=60)
+                t2 = ts_utc + timedelta(seconds=int(log.get("elapsed_seconds", 30)) + 120)
+                cursor_p = db.processed_data.find({"processed_time": {"$gte": t1, "$lte": t2}})
+                async for p in cursor_p:
+                    c_list = p.get("citations") or []
+                    matched_articles.append({
+                        "id": str(p["_id"]),
+                        "title": p.get("title", ""),
+                        "source_url": p.get("source_url", ""),
+                        "sentiment": p.get("sentiment", ""),
+                        "impact_level": p.get("impact_level", ""),
+                        "category": p.get("category", []),
+                        "target_scope": p.get("target_scope", []),
+                        "executive_summary": p.get("executive_summary", ""),
+                        "citations_count": len(c_list),
+                        "citations": [
+                            {"title": c.get("title", ""), "source_url": c.get("source_url", ""), "domain": c.get("domain", "")}
+                            for c in c_list
+                        ],
+                        "is_alerted": log.get("alerts_sent", 0) > 0,
+                    })
+            log["articles_created"] = matched_articles
+        else:
+            log["articles_created"] = log["articles_created"]
+
+        if not log.get("articles_grouped"):
+            log["articles_grouped"] = []
+
         recent_runs.append(log)
         
     return {

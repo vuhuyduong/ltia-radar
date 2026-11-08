@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { crawlerApi } from "@/lib/api";
 import { formatVietnamDateTime } from "@/lib/date";
+import { isBxdCriticalScope } from "@/lib/packages";
 import {
   Clock,
   Save,
@@ -21,9 +22,19 @@ import {
   Info,
   X,
   FileText,
+  Bell,
+  ExternalLink,
 } from "lucide-react";
 
-export default function SettingsPage() {
+interface SettingsPageProps {
+  initialTab?: "news" | "schedule" | "history";
+  onlyHistory?: boolean;
+}
+
+export default function SettingsPage({
+  initialTab = "news",
+  onlyHistory = false,
+}: SettingsPageProps = {}) {
   // Settings State
   const [isEnabled, setIsEnabled] = useState(true);
   const [frequencyType, setFrequencyType] = useState<"interval" | "daily" | "fixed_hours" | "hourly_range">("interval");
@@ -45,7 +56,9 @@ export default function SettingsPage() {
   const [triggerMsg, setTriggerMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // System Logs State
-  const [activeTab, setActiveTab] = useState<"news" | "schedule" | "history">("news");
+  const [activeTab, setActiveTab] = useState<"news" | "schedule" | "history">(
+    onlyHistory ? "history" : initialTab
+  );
   const [selectedRun, setSelectedRun] = useState<any | null>(null);
   const [logs, setLogs] = useState<{
     news_stats: {
@@ -247,18 +260,20 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-4xl">
-      <div>
-        <h1 className="text-2xl font-bold text-[hsl(var(--foreground))] flex items-center gap-2">
-          <Settings className="h-6 w-6 text-cyan-500" />
-          Thiết lập Crawler
-        </h1>
-        <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
-          Quản lý tần suất quét tự động và kích hoạt tiến trình cào tin tức thủ công nâng cao.
-        </p>
-      </div>
+    <div className="space-y-6 max-w-6xl">
+      {!onlyHistory ? (
+        <>
+          <div>
+            <h1 className="text-2xl font-bold text-[hsl(var(--foreground))] flex items-center gap-2">
+              <Settings className="h-6 w-6 text-cyan-500" />
+              Thiết lập Crawler
+            </h1>
+            <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
+              Quản lý tần suất quét tự động và kích hoạt tiến trình cào tin tức thủ công nâng cao.
+            </p>
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Left column: Form settings */}
         <div className="md:col-span-2 space-y-6">
           <form onSubmit={handleSaveSettings} className="glass-card rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 space-y-6">
@@ -538,6 +553,18 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+      </>
+      ) : (
+        <div>
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))] flex items-center gap-2">
+            <Activity className="h-6 w-6 text-cyan-500" />
+            Lịch sử Chạy & Giám sát Vận hành LLM
+          </h1>
+          <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
+            Theo dõi chi tiết các đợt cào dữ liệu, hạn mức Quota Google AI Studio Free Tier và các tin tức, cụm tin thu thập được.
+          </p>
+        </div>
+      )}
 
       {/* Nhật ký hoạt động của hệ thống */}
       <div className="glass-card rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 space-y-6">
@@ -945,147 +972,278 @@ export default function SettingsPage() {
                   )}
                 </div>
 
-                {/* Modal Chi tiết hoạt động LLM */}
+                {/* Modal Chi tiết hoạt động LLM, Thu thập & Cảnh báo */}
                 {selectedRun && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl relative">
-                      <div className="flex items-center justify-between border-b border-[hsl(var(--border))] pb-3">
-                        <div className="flex items-center gap-2">
-                          <Cpu className="h-5 w-5 text-cyan-500" />
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-6 animate-in fade-in duration-200">
+                    <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl relative overflow-hidden">
+                      {/* Modal Header */}
+                      <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-6 py-4 bg-[hsl(var(--secondary))]/20 flex-shrink-0">
+                        <div className="flex items-center gap-2.5">
+                          <Activity className="h-5 w-5 text-cyan-500" />
                           <div>
                             <h3 className="text-base font-bold text-[hsl(var(--foreground))]">
-                              Chi tiết Hoạt động LLM & Quota Free Tier
+                              Chi tiết Vận hành, Thu thập & Cảnh báo Đợt quét
                             </h3>
                             <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
-                              Thời gian: {formatVietnamDateTime(selectedRun.timestamp)} (Giờ Việt Nam UTC+7)
+                              Thời gian: {formatVietnamDateTime(selectedRun.timestamp)} (GMT+7) • Thời lượng: {selectedRun.elapsed_seconds.toFixed(1)}s • Kiểu: {selectedRun.trigger_type === "scheduled" ? "Tự động" : "Thủ công"}
                             </p>
                           </div>
                         </div>
                         <button
                           type="button"
                           onClick={() => setSelectedRun(null)}
-                          className="p-1.5 rounded-lg border border-[hsl(var(--border))] hover:bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))]"
+                          className="p-1.5 rounded-lg border border-[hsl(var(--border))] hover:bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
                         >
                           <X className="h-4 w-4" />
                         </button>
                       </div>
 
-                      <div className="space-y-4 text-xs">
-                        {/* Section 1: LLM Engine Details */}
-                        <div className="p-3.5 rounded-xl bg-[hsl(var(--secondary))]/30 border border-[hsl(var(--border))]/60 space-y-2.5">
-                          <h4 className="text-[11px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
-                            <Cpu className="h-3.5 w-3.5" />
-                            Thông số Mô hình AI
-                          </h4>
-                          <div className="grid grid-cols-2 gap-3 pt-1">
-                            <div>
-                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Mô hình (Model):</span>
-                              <span className="font-mono font-bold text-sm text-[hsl(var(--foreground))]">
-                                {selectedRun.llm_model || "gemini-3.8-flash"}
-                              </span>
+                      {/* Modal Scrollable Body */}
+                      <div className="p-6 space-y-6 overflow-y-auto flex-1 text-xs">
+                        {/* Row 1: 2 Cards - AI Specs + Crawl Summary */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Card A: LLM Model & Free Tier */}
+                          <div className="p-4 rounded-xl bg-[hsl(var(--secondary))]/30 border border-[hsl(var(--border))]/60 space-y-3">
+                            <h4 className="text-[11px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
+                              <Cpu className="h-4 w-4" />
+                              Mô hình AI & Quota Free Tier
+                            </h4>
+                            <div className="grid grid-cols-2 gap-2.5 pt-1">
+                              <div>
+                                <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Mô hình AI:</span>
+                                <span className="font-mono font-bold text-xs text-[hsl(var(--foreground))]">
+                                  {selectedRun.llm_model || "gemini-2.0-flash"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Đuôi API Key:</span>
+                                <span className="font-mono font-bold text-xs text-cyan-600 dark:text-cyan-400">
+                                  {selectedRun.llm_key_suffix || "N/A"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Tokens tiêu thụ / Free TPM:</span>
+                                <span className="font-mono font-bold text-xs text-cyan-600 dark:text-cyan-400">
+                                  {(selectedRun.llm_tokens_used || 0).toLocaleString()} tok
+                                </span>
+                                <span className="text-[9px] text-[hsl(var(--muted-foreground))] block font-mono">
+                                  / {(selectedRun.llm_free_tpm_limit ? (selectedRun.llm_free_tpm_limit / 1000).toFixed(0) : 200)}k TPM
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Lỗi API (429 / 503):</span>
+                                {(selectedRun.llm_errors_429 || 0) + (selectedRun.llm_errors_503 || 0) === 0 ? (
+                                  <span className="text-xs font-semibold text-emerald-500">0 lỗi</span>
+                                ) : (
+                                  <span className="font-mono font-bold text-xs text-rose-500">
+                                    {selectedRun.llm_errors_429 ? `429: ${selectedRun.llm_errors_429} ` : ""}
+                                    {selectedRun.llm_errors_503 ? `503: ${selectedRun.llm_errors_503}` : ""}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Đuôi API Key sử dụng:</span>
-                              <span className="font-mono font-bold text-sm text-cyan-600 dark:text-cyan-400">
-                                {selectedRun.llm_key_suffix || "N/A"}
-                              </span>
+                            {selectedRun.llm_prompt_name && (
+                              <div className="pt-2 border-t border-[hsl(var(--border))]/40 text-[10px] text-[hsl(var(--muted-foreground))]">
+                                Prompt: <span className="text-[hsl(var(--foreground))] font-medium">{selectedRun.llm_prompt_name}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Card B: Pipeline Counts */}
+                          <div className="p-4 rounded-xl bg-[hsl(var(--secondary))]/30 border border-[hsl(var(--border))]/60 space-y-3">
+                            <h4 className="text-[11px] font-bold uppercase tracking-wider text-[hsl(var(--foreground))] flex items-center gap-1.5">
+                              <Database className="h-4 w-4 text-cyan-500" />
+                              Tổng hợp Thu thập & Cảnh báo
+                            </h4>
+                            <div className="grid grid-cols-4 gap-2 pt-1 text-center">
+                              <div className="p-2.5 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
+                                <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Tin thô cào</span>
+                                <span className="font-mono font-bold text-sm text-[hsl(var(--foreground))]">{selectedRun.crawled_count}</span>
+                              </div>
+                              <div className="p-2.5 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
+                                <span className="text-[10px] text-amber-500 block">Tin mới</span>
+                                <span className="font-mono font-bold text-sm text-amber-500">{selectedRun.new_articles}</span>
+                              </div>
+                              <div className="p-2.5 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
+                                <span className="text-[10px] text-cyan-500 block">Cụm tin lưu</span>
+                                <span className="font-mono font-bold text-sm text-cyan-600 dark:text-cyan-400">{selectedRun.processed_count}</span>
+                              </div>
+                              <div className="p-2.5 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
+                                <span className="text-[10px] text-rose-500 block">Cảnh báo</span>
+                                <span className="font-mono font-bold text-sm text-rose-500">{selectedRun.alerts_sent}</span>
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Nhà cung cấp:</span>
-                              <span className="font-medium text-[hsl(var(--foreground))]">
-                                {selectedRun.llm_provider || "Google Gemini"}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Trạng thái LLM:</span>
-                              <span className="font-semibold text-emerald-500">
-                                {selectedRun.llm_status === "idle"
-                                  ? "Nghỉ (không có tin mới)"
-                                  : selectedRun.llm_status === "success"
-                                  ? "Hoàn thành phân tích"
-                                  : selectedRun.llm_status || "Sẵn sàng"}
-                              </span>
+                            <div className="text-[10px] text-[hsl(var(--muted-foreground))] flex justify-between items-center pt-1">
+                              <span>Trạng thái: <b className="text-[hsl(var(--foreground))]">{selectedRun.status}</b></span>
+                              <span className="font-mono text-[9px]">Run ID: {selectedRun._id}</span>
                             </div>
                           </div>
-                          {selectedRun.llm_prompt_name && (
-                            <div className="pt-2 border-t border-[hsl(var(--border))]/40">
-                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Prompt áp dụng:</span>
-                              <span className="font-medium text-[hsl(var(--foreground))]">
-                                {selectedRun.llm_prompt_name}
-                              </span>
+                        </div>
+
+                        {/* Section 2: Table of Created Articles and Clusters */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-[hsl(var(--foreground))] flex items-center gap-1.5">
+                              <Layers className="h-4 w-4 text-cyan-500" />
+                              Chi tiết các Tin mới & Cụm tin phân tích trong đợt quét
+                              {selectedRun.articles_created && selectedRun.articles_created.length > 0 && (
+                                <span className="ml-1.5 px-2 py-0.5 rounded-full text-[10px] bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-mono font-bold border border-cyan-500/20">
+                                  {selectedRun.articles_created.length} cụm tin
+                                </span>
+                              )}
+                            </h4>
+                          </div>
+
+                          {selectedRun.articles_created && selectedRun.articles_created.length > 0 ? (
+                            <div className="rounded-xl border border-[hsl(var(--border))] overflow-hidden bg-[hsl(var(--card))]">
+                              <table className="w-full text-left text-xs divide-y divide-[hsl(var(--border))]">
+                                <thead className="bg-[hsl(var(--secondary))]/40 font-semibold text-[hsl(var(--muted-foreground))] text-[11px] uppercase tracking-wider">
+                                  <tr>
+                                    <th className="px-3.5 py-2.5 w-[32%]">Tiêu đề tin & Cụm nguồn</th>
+                                    <th className="px-3.5 py-2.5 w-[22%]">Gói thầu & Danh mục</th>
+                                    <th className="px-3.5 py-2.5 w-[16%]">Sắc thái / Mức độ</th>
+                                    <th className="px-3.5 py-2.5 w-[30%]">Tóm tắt AI & Cảnh báo</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-[hsl(var(--border))]/60">
+                                  {selectedRun.articles_created.map((art: any, aIdx: number) => (
+                                    <tr key={art.id || aIdx} className="hover:bg-[hsl(var(--secondary))]/20 transition-colors">
+                                      {/* Tiêu đề & Cụm */}
+                                      <td className="px-3.5 py-3 align-top">
+                                        <a
+                                          href={art.source_url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="font-semibold text-[hsl(var(--foreground))] hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors inline-flex items-start gap-1 leading-snug"
+                                        >
+                                          <span>{art.title}</span>
+                                          <ExternalLink className="h-3 w-3 flex-shrink-0 mt-0.5 opacity-60" />
+                                        </a>
+                                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                                            {art.citations_count || 1} bài gom cụm
+                                          </span>
+                                          {art.citations && art.citations.map((c: any, cIdx: number) => (
+                                            <span key={cIdx} className="text-[9px] text-[hsl(var(--muted-foreground))]">
+                                              {c.domain}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </td>
+
+                                      {/* Gói thầu & Danh mục */}
+                                      <td className="px-3.5 py-3 align-top space-y-1">
+                                        <div className="flex flex-wrap gap-1">
+                                          {art.target_scope && art.target_scope.map((scope: string) => {
+                                            const isCrit = isBxdCriticalScope(scope);
+                                            return (
+                                              <span
+                                                key={scope}
+                                                className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${
+                                                  isCrit
+                                                    ? "bg-rose-500/15 text-rose-500 dark:text-rose-400 border border-rose-500/30 font-bold"
+                                                    : "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20"
+                                                }`}
+                                              >
+                                                {scope}
+                                              </span>
+                                            );
+                                          })}
+                                        </div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {art.category && art.category.map((cat: string) => (
+                                            <span key={cat} className="px-1.5 py-0.5 rounded text-[9px] bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))]">
+                                              {cat}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </td>
+
+                                      {/* Sắc thái & Mức độ */}
+                                      <td className="px-3.5 py-3 align-top space-y-1">
+                                        <div>
+                                          <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                            art.impact_level === "CRITICAL"
+                                              ? "bg-rose-500/15 text-rose-500 border border-rose-500/30"
+                                              : art.impact_level === "HIGH"
+                                              ? "bg-orange-500/15 text-orange-500 border border-orange-500/30"
+                                              : "bg-blue-500/15 text-blue-500"
+                                          }`}>
+                                            {art.impact_level}
+                                          </span>
+                                        </div>
+                                        <div>
+                                          <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                                            art.sentiment === "NEGATIVE"
+                                              ? "bg-rose-500/10 text-rose-500"
+                                              : art.sentiment === "POSITIVE"
+                                              ? "bg-emerald-500/10 text-emerald-500"
+                                              : "bg-slate-500/10 text-slate-400"
+                                          }`}>
+                                            {art.sentiment === "NEGATIVE" ? "Tiêu cực" : art.sentiment === "POSITIVE" ? "Tích cực" : "Trung lập"}
+                                          </span>
+                                        </div>
+                                      </td>
+
+                                      {/* Tóm tắt & Cảnh báo */}
+                                      <td className="px-3.5 py-3 align-top space-y-1.5">
+                                        <p className="text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))] line-clamp-3">
+                                          {art.executive_summary}
+                                        </p>
+                                        {art.is_alerted && (
+                                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/10 text-rose-500 text-[10px] font-semibold border border-rose-500/20">
+                                            <Bell className="h-3 w-3" />
+                                            Đã gửi cảnh báo Telegram
+                                          </div>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="p-6 rounded-xl border border-dashed border-[hsl(var(--border))] text-center text-xs text-[hsl(var(--muted-foreground))] bg-[hsl(var(--secondary))]/15">
+                              <p className="font-medium text-[hsl(var(--foreground))]">Không ghi nhận tin mới nào trong đợt quét này.</p>
+                              <p className="text-[11px] mt-1 text-[hsl(var(--muted-foreground))]">
+                                Hệ thống ở trạng thái nghỉ do không phát hiện tin tức mới về Sân bay Long Thành, hoặc tất cả tin quét được đều đã trùng lặp.
+                              </p>
                             </div>
                           )}
                         </div>
 
-                        {/* Section 2: Consumption & Free Tier Limits */}
-                        <div className="p-3.5 rounded-xl bg-[hsl(var(--secondary))]/30 border border-[hsl(var(--border))]/60 space-y-2.5">
-                          <h4 className="text-[11px] font-bold uppercase tracking-wider text-[hsl(var(--foreground))] flex items-center gap-1.5">
-                            <Activity className="h-3.5 w-3.5 text-cyan-500" />
-                            Google AI Studio Free Tier & Quota
-                          </h4>
-                          <div className="grid grid-cols-3 gap-2 pt-1 text-center">
-                            <div className="p-2 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
-                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Tokens tiêu thụ / Free TPM</span>
-                              <span className="font-mono font-bold text-sm text-cyan-600 dark:text-cyan-400">
-                                {selectedRun.llm_tokens_used ? selectedRun.llm_tokens_used.toLocaleString() : "0"}
-                              </span>
-                              <span className="text-[9px] text-[hsl(var(--muted-foreground))] block">
-                                / {(selectedRun.llm_free_tpm_limit || 200000).toLocaleString()} TPM
-                              </span>
-                            </div>
-                            <div className="p-2 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
-                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Lỗi 429 (Rate Limit)</span>
-                              <span className={`font-mono font-bold text-sm ${selectedRun.llm_errors_429 > 0 ? "text-amber-500" : "text-emerald-500"}`}>
-                                {selectedRun.llm_errors_429 || 0} lần
-                              </span>
-                              <span className="text-[9px] text-[hsl(var(--muted-foreground))] block">Giới hạn: 20 RPD</span>
-                            </div>
-                            <div className="p-2 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
-                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Lỗi 503 (Overload)</span>
-                              <span className={`font-mono font-bold text-sm ${selectedRun.llm_errors_503 > 0 ? "text-rose-500" : "text-emerald-500"}`}>
-                                {selectedRun.llm_errors_503 || 0} lần
-                              </span>
-                              <span className="text-[9px] text-[hsl(var(--muted-foreground))] block">Google Server High Demand</span>
+                        {/* Section 3: Grouped duplicate articles if any */}
+                        {selectedRun.articles_grouped && selectedRun.articles_grouped.length > 0 && (
+                          <div className="space-y-2 pt-2 border-t border-[hsl(var(--border))]/60">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-[hsl(var(--foreground))] flex items-center gap-1.5">
+                              <Layers className="h-3.5 w-3.5 text-amber-500" />
+                              Các tin tức trùng lặp đã tự động gộp vào cụm bài viết có sẵn ({selectedRun.articles_grouped.length})
+                            </h4>
+                            <div className="rounded-lg border border-[hsl(var(--border))] overflow-hidden bg-[hsl(var(--card))]">
+                              <div className="divide-y divide-[hsl(var(--border))]/50">
+                                {selectedRun.articles_grouped.map((grp: any, gIdx: number) => (
+                                  <div key={gIdx} className="px-3.5 py-2 flex items-center justify-between text-xs gap-3">
+                                    <div className="flex-1 truncate">
+                                      <span className="font-mono text-[10px] text-cyan-600 dark:text-cyan-400 mr-1.5">[{grp.domain}]</span>
+                                      <span className="text-[hsl(var(--foreground))]">{grp.title}</span>
+                                    </div>
+                                    <div className="text-[10px] text-[hsl(var(--muted-foreground))] whitespace-nowrap">
+                                      Gộp vào: <span className="italic">{grp.parent_article_title?.slice(0, 40)}...</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           </div>
-                        </div>
-
-                        {/* Section 3: Crawl Counts */}
-                        <div className="p-3.5 rounded-xl bg-[hsl(var(--secondary))]/30 border border-[hsl(var(--border))]/60 space-y-2.5">
-                          <h4 className="text-[11px] font-bold uppercase tracking-wider text-[hsl(var(--foreground))] flex items-center gap-1.5">
-                            <Database className="h-3.5 w-3.5 text-cyan-500" />
-                            Kết quả Thu thập & Cảnh báo
-                          </h4>
-                          <div className="grid grid-cols-4 gap-2 pt-1 text-center">
-                            <div className="p-2 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
-                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Tin thô</span>
-                              <span className="font-mono font-bold text-sm">{selectedRun.crawled_count}</span>
-                            </div>
-                            <div className="p-2 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
-                              <span className="text-[10px] text-amber-500 block">Tin mới</span>
-                              <span className="font-mono font-bold text-sm text-amber-500">{selectedRun.new_articles}</span>
-                            </div>
-                            <div className="p-2 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
-                              <span className="text-[10px] text-cyan-500 block">Cụm tin</span>
-                              <span className="font-mono font-bold text-sm text-cyan-600 dark:text-cyan-400">{selectedRun.processed_count}</span>
-                            </div>
-                            <div className="p-2 rounded-lg bg-[hsl(var(--card))] border border-[hsl(var(--border))]/50">
-                              <span className="text-[10px] text-[hsl(var(--muted-foreground))] block">Cảnh báo</span>
-                              <span className="font-mono font-bold text-sm">{selectedRun.alerts_sent}</span>
-                            </div>
-                          </div>
-                          <div className="flex justify-between items-center text-[10px] text-[hsl(var(--muted-foreground))] pt-1">
-                            <span>Kiểu kích hoạt: {selectedRun.trigger_type === "scheduled" ? "Tự động theo lịch" : "Thủ công"}</span>
-                            <span>ID: {selectedRun._id}</span>
-                          </div>
-                        </div>
+                        )}
                       </div>
 
-                      <div className="flex justify-end pt-2">
+                      {/* Modal Footer */}
+                      <div className="flex justify-end px-6 py-3 border-t border-[hsl(var(--border))] bg-[hsl(var(--secondary))]/20 flex-shrink-0">
                         <button
                           type="button"
                           onClick={() => setSelectedRun(null)}
-                          className="px-4 py-2 rounded-xl border border-[hsl(var(--border))] hover:bg-[hsl(var(--secondary))] text-xs font-semibold"
+                          className="px-5 py-2 rounded-xl border border-[hsl(var(--border))] hover:bg-[hsl(var(--secondary))] text-xs font-semibold text-[hsl(var(--foreground))] transition-colors shadow-sm"
                         >
                           Đóng
                         </button>

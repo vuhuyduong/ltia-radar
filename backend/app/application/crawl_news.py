@@ -229,6 +229,8 @@ class CrawlNewsUseCase:
             # Step 4: Pre-LLM deduplication against DB only
             # We still check against DB to avoid re-processing known articles
             representative_articles: list[RawData] = []
+            created_summary: list[dict] = []
+            grouped_summary: list[dict] = []
 
             logger.info("🔍 Checking new articles against DB...")
             for article in new_articles:
@@ -246,6 +248,13 @@ class CrawlNewsUseCase:
                     logger.info(
                         f"🔗 Grouped '{article.title}' under DB article {similar_doc['_id']}"
                     )
+                    grouped_summary.append({
+                        "title": article.title,
+                        "source_url": article.source_url,
+                        "domain": citation["domain"],
+                        "parent_article_id": str(similar_doc["_id"]),
+                        "parent_article_title": similar_doc.get("title", ""),
+                    })
                     continue
 
                 representative_articles.append(article)
@@ -310,13 +319,15 @@ class CrawlNewsUseCase:
                         grouped_articles = [batch[i] for i in indices[1:] if i < len(batch)]
 
                         try:
-                            await self._store_and_alert(
+                            item_summary = await self._store_and_alert(
                                 primary_article,
                                 cluster,
                                 active_rules,
                                 stats,
                                 grouped_articles=grouped_articles,
                             )
+                            if item_summary:
+                                created_summary.append(item_summary)
                         except Exception as store_err:
                             logger.error(f"Error storing/alerting: {store_err}")
                             stats["errors"] += 1
@@ -376,6 +387,8 @@ class CrawlNewsUseCase:
                 "llm_errors_other": llm_metrics.get("errors_other", 0),
                 "llm_prompt_name": llm_metrics.get("prompt_name", ""),
                 "llm_status": llm_metrics.get("status", "idle" if stats["new_articles"] == 0 else "success"),
+                "articles_created": created_summary,
+                "articles_grouped": grouped_summary,
             }
             await db.crawl_logs.insert_one(log_doc)
             logger.info("💾 Saved crawl activity log with LLM metrics to database")
@@ -464,6 +477,7 @@ class CrawlNewsUseCase:
         stats["processed"] += 1
 
         # Evaluate alert rules
+        alerted_rules: list[str] = []
         for rule_doc in active_rules:
             if self._matches_rule(processed, rule_doc):
                 from app.domain.entities.alert_rule import AlertRule
@@ -471,6 +485,29 @@ class CrawlNewsUseCase:
                 success = await self.alert_service.send_alert(processed, rule)
                 if success:
                     stats["alerts_sent"] += 1
+                    alerted_rules.append(rule.rule_name)
+
+        return {
+            "id": str(processed.id),
+            "title": processed.title,
+            "source_url": processed.source_url,
+            "sentiment": str(getattr(processed, "sentiment", "")),
+            "impact_level": str(getattr(processed, "impact_level", "")),
+            "category": getattr(processed, "category", []),
+            "target_scope": getattr(processed, "target_scope", []),
+            "executive_summary": getattr(processed, "executive_summary", ""),
+            "citations_count": len(citations),
+            "citations": [
+                {
+                    "title": c.get("title", ""),
+                    "source_url": c.get("source_url", ""),
+                    "domain": c.get("domain", ""),
+                }
+                for c in citations
+            ],
+            "is_alerted": len(alerted_rules) > 0,
+            "alerted_rules": alerted_rules,
+        }
 
     @staticmethod
     def _make_citation(article: RawData) -> dict:

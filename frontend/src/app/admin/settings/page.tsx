@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Globe, Brain, Clock, Shield, Bell } from "lucide-react";
+import { Globe, Brain, Clock, Shield, Bell, Activity } from "lucide-react";
 import SourcesPage from "@/app/sources/page";
 import KeywordsPage from "@/app/keywords/page";
 import LLMConfigsPage from "@/components/settings/llm-configs";
@@ -9,7 +9,7 @@ import SettingsPage from "@/app/settings/page";
 import AlertRulesPage from "@/components/settings/alert-rules";
 import { generalApi } from "@/lib/api";
 
-type TabId = "general" | "sources" | "ai" | "crawler" | "rules";
+type TabId = "general" | "sources" | "ai" | "crawler" | "history" | "rules";
 
 export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("general");
@@ -66,6 +66,7 @@ export default function AdminSettingsPage() {
     { id: "sources", label: "Nguồn tin & Từ khóa", icon: Globe },
     { id: "ai", label: "Cấu hình AI", icon: Brain },
     { id: "crawler", label: "Cấu hình quét", icon: Clock },
+    { id: "history", label: "Lịch sử chạy", icon: Activity },
     { id: "rules", label: "Quy tắc cảnh báo", icon: Bell },
   ];
 
@@ -208,7 +209,13 @@ export default function AdminSettingsPage() {
 
         {activeTab === "crawler" && (
           <div>
-            <SettingsPage />
+            <SettingsPage initialTab="news" />
+          </div>
+        )}
+
+        {activeTab === "history" && (
+          <div>
+            <SettingsPage initialTab="history" onlyHistory={true} />
           </div>
         )}
 

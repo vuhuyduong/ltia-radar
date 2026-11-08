@@ -168,15 +168,22 @@ class TelegramAlertService(IAlertService):
         # Rumor flag
         rumor_flag = "\n⚠️ <b>CẢNH BÁO TIN ĐỒN</b> — Cần xác minh!" if processed_data.is_rumor else ""
 
+        if sentiment_key == "POSITIVE":
+            header_prefix = f"🚀🎉 <b>LTIA RADAR — ĐIỂM SÁNG TIẾN ĐỘ & VẬN HÀNH ({impact_key})</b>"
+        elif sentiment_key == "NEGATIVE":
+            header_prefix = f"{impact_emoji} <b>LTIA RADAR — CẢNH BÁO RỦI RO {impact_key}</b>"
+        else:
+            header_prefix = f"ℹ️ <b>LTIA RADAR — THÔNG TIN DỰ ÁN ({impact_key})</b>"
+
         message = (
-            f"{impact_emoji} <b>LTIA RADAR — CẢNH BÁO {impact_key}</b>\n"
+            f"{header_prefix}\n"
             f"{'━' * 30}\n\n"
             f"📰 <b>{processed_data.title}</b>\n\n"
             f"📝 <i>{processed_data.executive_summary}</i>\n\n"
             f"📊 Mức độ: <b>{impact_display}</b> | "
             f"Sắc thái: {sentiment_emoji} {sentiment_display}\n"
             f"📁 Phân loại: {categories}\n"
-            f"🎯 Phạm vi: {scope}\n"
+            f"🎯 Gói thầu / Phạm vi: {scope}\n"
         )
 
         if entities:
